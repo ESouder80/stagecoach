@@ -1,23 +1,37 @@
-library(readxl)
-Caswell_A <- read_excel("C:/Users/Erin/Desktop/Caswell_A.xlsx",sheet = 1)
-Caswell_P <- read_excel("C:/Users/Erin/Desktop/Caswell_P.xlsx")
-Caswell_C <- read_excel("C:/Users/Erin/Desktop/Caswell_C.xlsx")
-Caswell_B <- read_excel("C:/Users/Erin/Desktop/Caswell_B.xlsx")
-Fission <- read_excel("C:/Users/Erin/Desktop/Caswell_F.xlsx")
+rm(list=ls(all=TRUE)); 
 
 library(readxl)
-
 library(Matrix)
 library(expm)
 
+USER = "Steve"; ## variable to flag where the data files are. 
 
+if(USER == "Steve"){
+    home = "c:/repos/stagecoach"; setwd(home); 
+    Caswell_A <- read_excel("Caswell_A.xlsx",sheet = 1)
+    Caswell_P <- read_excel("Caswell_P.xlsx")
+    
+    ########## COMMENT: this isn't actually needed (??)  
+    # Caswell_C <- read_excel("Caswell_C.xlsx")  
+    
+    Caswell_B <- read_excel("Caswell_B.xlsx")
+    Fission <- read_excel("Caswell_F.xlsx")
+} else {
+    Caswell_A <- read_excel("C:/Users/Erin/Desktop/Caswell_A.xlsx",sheet = 1)
+    Caswell_P <- read_excel("C:/Users/Erin/Desktop/Caswell_P.xlsx")
+    Caswell_C <- read_excel("C:/Users/Erin/Desktop/Caswell_C.xlsx")
+    Caswell_B <- read_excel("C:/Users/Erin/Desktop/Caswell_B.xlsx")
+    Fission <- read_excel("C:/Users/Erin/Desktop/Caswell_F.xlsx")
+} 
+    
 A <- as.matrix(Caswell_P + Caswell_B + Fission)
 B <- as.matrix(Caswell_B)
 C <- as.matrix(Caswell_P + Fission)
 P <- as.matrix(Caswell_P)
 
-##Stage Based Information##
-
+##################################################################
+## Stage Based Information #####
+##################################################################
 
 pop_growth <- function(A) {
   # Population growth: Lambda
@@ -28,12 +42,10 @@ pop_growth <- function(A) {
   
 }
 
-
-
 stable_stage_dist <- function(A){
   # Stable stage distribution: "w"
   # Need to use transition matrix A
-  # Scale so the first eigenvector number is 1
+  # COMMENT: distribution is scaled so that it sums to 1
   allvectors <- eigen(A) 
   num <- allvectors$vectors[,1]
   # Must specify column number 1
@@ -42,7 +54,6 @@ stable_stage_dist <- function(A){
   results <- num/den
   Re(results) 
 }
-
 
 reproductive_value <- function(A){
   # Transpose of matrix A gives left eigenvectors also known as reproductive value
@@ -78,11 +89,28 @@ elasticity_mat <- function(A){
   Re(results)
 }
 
+############# "Sanity check" - compare with Steve's code. All seems to be OK. 
+sens_and_elas = function(L) {
+    x <- eigen(L) 
+    w <- Re(x$vectors[,1]); 
+    lambda= Re(x$values[1]); 
+    x <- eigen(t(L))
+    v <- Re(x$vectors[,1])
+    sens <- outer(v,w)/sum(v*w)
+    elas <- (L/lambda) * sens
+    return(list(sens=sens, elas=elas))
+}     
+
+S1 = sensitivy_mat(A); E1 = elasticity_mat(A); 
+SE2 = sens_and_elas(A); S2 = SE2$sens; E2 = SE2$elas; 
+range(S1-S2); range(E1-E2); 
+############
 
 ###END OF STAGE BASED INFO###
 
-##AGE BASED INFO##
-
+##################################################################
+## AGE BASED INFO ##
+##################################################################
 
 n_bj <- function(A,B){
   # Equation 19
@@ -96,8 +124,6 @@ n_bj <- function(A,B){
   results <-  num/den
   results
 }
-
-
 
 age_in_stage <- function(A, B, C){
   # Equation 23
