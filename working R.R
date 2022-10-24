@@ -1,3 +1,14 @@
+##############################################################
+# Re-implementation of STAGECOACH, Cochran and Ellner (1992)
+#
+# Notation: transition matrix A = B + F + P 
+#   B = births (sexual), age 0 at birth
+#   F = fission (vegetative), regarded as a form of survival
+#      F is the paper's notation; here it is matrix Fission 
+#   P = survival without fission 
+#   C = F + P, both forms of survival
+#############################################################
+
 rm(list=ls(all=TRUE)); 
 
 library(readxl)
@@ -10,16 +21,11 @@ if(USER == "Steve"){
     home = "c:/repos/stagecoach"; setwd(home); 
     Caswell_A <- read_excel("Caswell_A.xlsx",sheet = 1)
     Caswell_P <- read_excel("Caswell_P.xlsx")
-    
-    ########## COMMENT: this isn't actually needed (??)  
-    # Caswell_C <- read_excel("Caswell_C.xlsx")  
-    
     Caswell_B <- read_excel("Caswell_B.xlsx")
     Fission <- read_excel("Caswell_F.xlsx")
 } else {
     Caswell_A <- read_excel("C:/Users/Erin/Desktop/Caswell_A.xlsx",sheet = 1)
     Caswell_P <- read_excel("C:/Users/Erin/Desktop/Caswell_P.xlsx")
-    Caswell_C <- read_excel("C:/Users/Erin/Desktop/Caswell_C.xlsx")
     Caswell_B <- read_excel("C:/Users/Erin/Desktop/Caswell_B.xlsx")
     Fission <- read_excel("C:/Users/Erin/Desktop/Caswell_F.xlsx")
 } 
@@ -65,8 +71,6 @@ reproductive_value <- function(A){
   Re(results)
 }
 
-
-
 sensitivy_mat <- function(A){
   # Using both the eigenvectors found above, sensitivity matrix can be calulated
   # transpose of stable stage distribution * reproduction vector
@@ -77,7 +81,6 @@ sensitivy_mat <- function(A){
   results <- num/den
   Re(results)
 }
-
 
 elasticity_mat <- function(A){
   # Dominant right eigenvalue and sensitivity matrix
@@ -125,6 +128,7 @@ n_bj <- function(A,B){
   results
 }
 
+############## Matches results from CE92 fortran code 
 age_in_stage <- function(A, B, C){
   # Equation 23
   # Using matrix C which is P + F
@@ -142,7 +146,7 @@ age_in_stage <- function(A, B, C){
   results
 }
 
-
+############## Matches results from CE92 fortran code 
 age_in_stage_SD <- function(A, B, C){
   # Equation 24
   # Standard deviation of mean age in stage
@@ -161,8 +165,8 @@ age_in_stage_SD <- function(A, B, C){
 
 scaled_rep_value <- function(A){
   # Scaling the reproductive value so the first one is 1
-  x <- repro_value(A)[1]
-  results <- sum(repro_value(A) / x)
+  x <- reproductive_value(A)[1]
+  results <- sum(reproductive_value(A) / x)
   results
 }
 
