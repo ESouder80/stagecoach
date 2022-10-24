@@ -1,5 +1,5 @@
 ##############################################################
-# Re-implementation of STAGECOACH, Cochran and Ellner (1992)
+# R implementation of STAGECOACH, Cochran and Ellner (1992)
 #
 # Notation: transition matrix A = B + F + P 
 #   B = births (sexual), age 0 at birth
@@ -36,7 +36,7 @@ C <- as.matrix(Caswell_P + Fission)
 P <- as.matrix(Caswell_P)
 
 ##################################################################
-## Stage Based Information #####
+## Stage Based Information 
 ##################################################################
 
 pop_growth <- function(A) {
@@ -61,9 +61,10 @@ stable_stage_dist <- function(A){
   Re(results) 
 }
 
+## (Minor) modification by SPE to ensure real-valued vector 
 reproductive_value <- function(A){
   # Transpose of matrix A gives left eigenvectors also known as reproductive value
-  num <- eigen(t(A))$vectors[,1]
+  num <- Re(eigen(t(A))$vectors[,1]) 
   # Must specify colum number 1
   den <- sum(num)
   # scale vectors to sum to 1
@@ -84,15 +85,18 @@ sensitivy_mat <- function(A){
 
 elasticity_mat <- function(A){
   # Dominant right eigenvalue and sensitivity matrix
-  
   x <- 1/pop_growth(A)
   y <- sensitivy_mat(A)
-  # lambda /sensitivity matrix * A
+  
+  ## e(i,j) = A(i,j)*s(i,j)/lambda 
   results <- (x * y) * A
   Re(results)
 }
 
-############# "Sanity check" - compare with Steve's code. All seems to be OK. 
+############################################# 
+## "Sanity check" - compare sens and elas 
+## with Steve's standard code. All OK. 
+
 sens_and_elas = function(L) {
     x <- eigen(L) 
     w <- Re(x$vectors[,1]); 
@@ -104,10 +108,11 @@ sens_and_elas = function(L) {
     return(list(sens=sens, elas=elas))
 }     
 
-S1 = sensitivy_mat(A); E1 = elasticity_mat(A); 
-SE2 = sens_and_elas(A); S2 = SE2$sens; E2 = SE2$elas; 
-range(S1-S2); range(E1-E2); 
-############
+## Comparison of results. No difference! 
+## S1 = sensitivy_mat(A); E1 = elasticity_mat(A); 
+## SE2 = sens_and_elas(A); S2 = SE2$sens; E2 = SE2$elas; 
+## range(S1-S2); range(E1-E2); 
+#############################################
 
 ###END OF STAGE BASED INFO###
 
@@ -163,19 +168,35 @@ age_in_stage_SD <- function(A, B, C){
   results
 }
 
+## Modified by SPE: it was returning one number, not a vector! 
 scaled_rep_value <- function(A){
   # Scaling the reproductive value so the first one is 1
   x <- reproductive_value(A)[1]
-  results <- sum(reproductive_value(A) / x)
+  results <- reproductive_value(A)/x
   results
 }
 
-
+### Modified by SPE. This was not calculating eqn. 12 correctly. 
 gam_i <- function(A,B){
+  # Equation 12
+  v <- scaled_rep_value(A); 
+  results <- t(B)%*%v; 
+  results
+}
+
+### Original version 
+gam_i_original <- function(A,B){
   # Equation 12
   results <- colSums(B) * scaled_rep_value(A)
   results
 }
+
+### Comparison between versions and direct calculation. 
+### Modified version matches direct calculation for this case.
+gam_i(A,B); gam_i_original(A,B); 
+## Direct: only stage 6 has sexual reproduction 
+v = scaled_rep_value(A); sum(B[,6]*v); 
+
 
 
 g <- function(B){
@@ -184,18 +205,23 @@ g <- function(B){
   results
 }
 
+## Matches results of fortran code (after one typo fix in a function name) 
 pop_gen_time <- function(A, B, C){
   # Equation 26
   # sum the total of mean ages, stable stage vectors, and gamma multiplied 
   # and divide by the sum of stable stage vectors and gamma in order to produce 
-  num <- sum(age_in_stage_mean(A,B,C) * stable_stage_dist(A) * gam_i(A,B)) 
+  num <- sum(age_in_stage(A,B,C) * stable_stage_dist(A) * gam_i(A,B)) 
   den <- sum(stable_stage_dist(A) * gam_i(A,B))
   results <- num/den
   results
 }
 
-
-pit <- function(A,B,C, maxAge = 10){
+########################################################
+# Eqn 22. Note, this returns a matrix where p_{i,t}
+# is the (t,i) entry of the matrix. Original and SPE 
+# SPE modified versions return the same values. 
+########################################################
+pit_original <- function(A,B,C, maxAge = 10){
   # Equation 22
   p <- pop_growth(A)
   #lambda
@@ -211,24 +237,64 @@ pit <- function(A,B,C, maxAge = 10){
     den <- rowSums(solve(Imat - (C / p)) %*% b)
     x <- num/den
     
-    print(x)
+    # print(x)
     results[a + 1,] <- x
     
   }
   results
 }
 
+########################################################
+# Eqn 22. Again
+# Same results, but simpler calculation. 
+########################################################
+pit <- function(A,B,C, maxAge = 10){
+  # Equation 22
+  p <- pop_growth(A)
+  #lambda
+  b <- n_bj(A,B)
+  
+  Imat <- diag(x = 1, dim(C))
+  # Identity matrix
+  
+  den <- rowSums(solve(Imat - (C / p)) %*% b) 
+  # same for all a, so compute it just once 
+  
+  results <- matrix(NA, nrow = maxAge + 1, ncol = nrow(A))
+  Ca = Imat; 
+  # This will be C%^%a on each pass through the loop 
+  
+  for (a in 0 : (maxAge)) {
+    # for loop to determine the fraction of newborns in each stage
+    num <- (p ^ -a)*(Ca %*% b)
+    x <- num/den
+    # print(x)
+    results[a + 1,] <- x
+    Ca <- C %*% Ca 
+  }
+  results
+}
+range(pit(A,B,C)-pit_original(A,B,C)) # matches 
+
+
 stable_age_distribution <- function(A,B,C, maxAge = 10){
   # Equation 31
-  pp <- pit(A,B,C)
- 
-  results <- apply(pp, 1, weighted.mean,w = stable_stage_dist(A))
-  
+  pp <- pit(A,B,C,maxAge=maxAge)
+  results <- apply(pp, 1, weighted.mean, w = stable_stage_dist(A))
   results
- 
 }
 
+#### Same results using matrix multiplication 
+sad = function(A,B,C, maxAge=10) {
+      pp <- pit(A,B,C,maxAge=maxAge)
+      w <- stable_stage_dist(A); 
+      num = pp%*%w; den=sum(w); 
+      return(num/den)
+}      
+stable_age_distribution(A,B,C) - sad(A,B,C); # matches 
 
+
+# Matches the fortran output for this case 
 life_expectancy <- function(C){
   # Equation 3
   # Must use identity matrix the same size as your C or P matrix.
@@ -239,8 +305,7 @@ life_expectancy <- function(C){
   results
 }
 
-
-
+# Matches the fortran output for this case 
 life_expectancy_SD <- function(C){
   # Equation 5
   # Must use identity matrix the same size as your C or P matrix
@@ -248,12 +313,14 @@ life_expectancy_SD <- function(C){
   Imat <- diag(dim(C)[1])
   #take the inverse and mulitply it through twice and multiply by the sum of (I + C)
   y <- colSums((Imat + C) %*% (solve(Imat - C) %^% 2))
-  #take the squaretoot of this answer minus the life expectancy squared for the SD
+  # take the square-root of (this answer minus life expectancy squared) for the SD
   results <- sqrt(y - (life_expectancy(C))^2) 
   results
 }
 
-
+######################################
+#  SPE stopping here, Oct 24. 
+######################################
 
 Di_mat <- function(P){
   # Equation 8
