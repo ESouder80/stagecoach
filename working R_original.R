@@ -1,4 +1,4 @@
-﻿library(readxl)
+library(readxl)
 Caswell_A <- read_excel("C:/Users/Erin/Desktop/Caswell_A.xlsx",sheet = 1)
 Caswell_P <- read_excel("C:/Users/Erin/Desktop/Caswell_P.xlsx")
 Caswell_C <- read_excel("C:/Users/Erin/Desktop/Caswell_C.xlsx")
@@ -46,12 +46,12 @@ stable_stage_dist <- function(A){
 
 reproductive_value <- function(A){
   # Transpose of matrix A gives left eigenvectors also known as reproductive value
-  num <- eigen(t(A))$vectors[,1]
+  num <- Re(eigen(t(A))$vectors[,1])
   # Must specify colum number 1
   den <- sum(num)
   # scale vectors to sum to 1
   results <- num/den
-  Re(results)
+  results
 }
 
 
@@ -135,15 +135,16 @@ age_in_stage_SD <- function(A, B, C){
 
 scaled_rep_value <- function(A){
   # Scaling the reproductive value so the first one is 1
-  x <- repro_value(A)[1]
-  results <- sum(repro_value(A) / x)
+  x <- reproductive_value(A)[1]
+  results <- reproductive_value(A) / x
   results
 }
 
 
 gam_i <- function(A,B){
   # Equation 12
-  results <- colSums(B) * scaled_rep_value(A)
+  v <- scaled_rep_value(A)
+  results <- t(B) %*% v
   results
 }
 
@@ -158,7 +159,7 @@ pop_gen_time <- function(A, B, C){
   # Equation 26
   # sum the total of mean ages, stable stage vectors, and gamma multiplied 
   # and divide by the sum of stable stage vectors and gamma in order to produce 
-  num <- sum(age_in_stage_mean(A,B,C) * stable_stage_dist(A) * gam_i(A,B)) 
+  num <- sum(age_in_stage(A,B,C) * stable_stage_dist(A) * gam_i(A,B)) 
   den <- sum(stable_stage_dist(A) * gam_i(A,B))
   results <- num/den
   results
@@ -170,32 +171,35 @@ pit <- function(A,B,C, maxAge = 10){
   p <- pop_growth(A)
   #lambda
   b <- n_bj(A,B)
-  
   Imat <- diag(x = 1, dim(C))
   # Identity matrix
+  den <- rowSums(solve(Imat - (C/p)) %*% b)
+  # 
   results <- matrix(NA, nrow = maxAge + 1, ncol = nrow(A))
+  Ca = Imat;
   for (a in 0 : (maxAge)) {
     # for loop to determine the fraction of newborns in each stage
     
-    num <- (p ^ -a) %*% rowSums((C %^% a) %*% b)
-    den <- rowSums(solve(Imat - (C / p)) %*% b)
+    num <- (p ^ -a) %*% rowSums((Ca) %*% b)
+    
     x <- num/den
     
-    print(x)
+    #print(x)
     results[a + 1,] <- x
-    
+    Ca <- C %*% Ca
   }
   results
 }
 
 stable_age_distribution <- function(A,B,C, maxAge = 10){
   # Equation 31
-  pp <- pit(A,B,C)
+  pp <- pit(A,B,C,maxAge)
+  w <- stable_stage_dist(A)
  
-  results <- apply(pp, 1, weighted.mean,w = stable_stage_dist(A))
-  
+  num <- pp %*% w
+  den <- sum(w)
+  results <- num/den
   results
- 
 }
 
 
@@ -218,7 +222,7 @@ life_expectancy_SD <- function(C){
   Imat <- diag(dim(C)[1])
   #take the inverse and mulitply it through twice and multiply by the sum of (I + C)
   y <- colSums((Imat + C) %*% (solve(Imat - C) %^% 2))
-  #take the squaretoot of this answer minus the life expectancy squared for the SD
+  #take the squareroot of (this answer minus life expectancy squared) for the SD
   results <- sqrt(y - (life_expectancy(C))^2) 
   results
 }
@@ -265,23 +269,30 @@ meantime <- function(P,Di_mat){
   # -1 used because can't get to that stage
   
   return(results)
-  res <- meantime(P,Di)
+  res <- meantime(P,Di_mat)
   
   print(res)
 }
 
-meantime_SD <- function(P,D_mat,stage){
+meantime_SD <- function(P,Di_mat){
   #Equation 10
   #OUTPUT DOESN'T MATCH STAGECOACH
-  D <- D_mat(P,stage)
-  Imat <- diag(x = 1, dim(P))
-  m <- meantime(P,D_mat,stage)
-  num <- (Imat + D) %*% (solve(Imat - D) %*% (Imat - D) %*% (Imat - D))
-  den <- solve(Imat - D)
-  results <- (num/den) - 1
-  results[is.nan(results)] <- 0
-  results <- results - (m) ^ 2
-  return(sqrt(results[stage,]))
+  D <- Di_mat(P)
+  m <- meantime(P,Di_mat)
+  results <- matrix(0, nrow=dim(D[,,1])[1], ncol=dim(D[,,1])[2])
+  # Make new matrix 
+  
+  for (i in 1:dim(results)[1]) {
+    Imat <- diag(x=1, dim(D[,,i])[1])
+    num <- (Imat + D[,,i]) %*% solve((Imat - D[,,i]) %*% (Imat - D[,,i]) %*% (Imat -D[,,i])) 
+    den <- solve(Imat - D[,,i]) 
+    results[i,] <- (num[i,]/den[i,]) - 1
+    results[i,] <- results[i,] - (m[i,]) ^ 2
+  }
+  # for loop in order to use identity matrix
+  #results[is.nan(results)] <- -1
+  # -1 used because can't get to that stage
+ results
   
 }
 
@@ -312,7 +323,7 @@ total_lifeSpan <- function(P,Di_mat){
 total_lifeSpan_SD <- function(P, D_mat,stage){
   #Equation 7
   #OUTPUT DOESN'T MATCH STAGECOACH COMPLETELY. I believe this is due to meantime_SD
-  MTSD <- meantime(P,D_mat,stage)
+  MTSD <- meantime(P,Di_mat)
   LESD <- life_expectancy_sd(P)[stage]
   results <- LESD + MTSD 
   return(results)
@@ -367,7 +378,7 @@ fx_pop <- function(A,B,C,newbornType, max10 = 10){
   f <- fx(B,C,newbornType)
   b <- n_bj(A,B)[newbornType]
  results <- colSums(f * b)
- return(results)
+ results
   
 }
 
@@ -404,7 +415,7 @@ Vx_V1_pop <- function(A,B,C,newbornType, MAX10 = 10){
     res <- cbind(res, vx[,x] * n)
   }
   results <- colSums(res)
-  return(results)
+ results
 }
 
 
@@ -414,7 +425,7 @@ net_rep <- function(B, C, newbornType){
   Imat <- diag(dim(C)[1])
   y <- g(B)
   results <- colSums(solve(Imat - C) * y)[newbornType]
-  return(results)
+  results
 }
 
 
@@ -423,7 +434,7 @@ net_rep_pop <- function(A,B,C,newbornType){
   R <- net_rep(B,C,newbornType)
   b <- n_bj(A,B)[newbornType]
   results <- sum(R * b)
-  return(results)
+ results
 }
 
 average_age_production <- function(A,B,C,newbornType){
@@ -459,15 +470,15 @@ results
 
 mean_age_residence_SD <- function(C){
   # Equation 30
-  #Need to fix this
+  #Need to fix this so it just gives the newbornTypes 1,3,4,5
   
-  S <- mean_age_residence(C)
+  S <- mean_age_residence(C,newbornType)
   Imat <- diag(dim(C)[1])
   # identity matrix
-  num <- (Imat + C) %*% solve(Imat - C) %^% 3
+  num <- (Imat + C) %*% solve((Imat - C) %^% 3)
   den <- solve(Imat - C)
   results <- abs(sqrt((num / den) - S ^ 2))
-  results[is.nan(result)] <- 0
+  results[is.nan(results)] <- 0
  results
   
 }
@@ -486,13 +497,13 @@ mean_age_residence_pop <- function(A,B,C){
 
 mean_age_residence_pop_SD <- function(A,B,C){
   #Table 2
-  #NEED TO FIX
+  #DOESN'T MATCH OUTPUT
   s <- mean_age_residence_pop(A,B,C)
   b <- n_bj(A,B)
   Imat <- diag(x = 1, dim(C))
   # identity matrix
-  num <- ((Imat + C) %*% solve(Imat - C) %^% 3) * b
-  den <- (solve(Imat - C)) * b
+  num <- ((Imat + C) %*% solve(Imat - C) %^% 3) %*% b
+  den <- (solve(Imat - C)) %*% b
   results <- sqrt((num/den) - s ^ 2)
   results
 }
@@ -538,7 +549,7 @@ maturity_age_SD <- function(P,Q_mat,stage,newbornType){
  q <- Q_mat(P,stage)
  m <- maturity_age(P,Q_mat,stage,newbornType)
  Imat <- diag(dim(P)[1])
-  num <- abs(Imat + q) %*% (solve(abs(Imat - q) %*% abs(Imat - q) %*% abs(Imat - q)))
+  num <- (Imat + q) %*% (solve((Imat - q) %*% (Imat - q) %*% (Imat - q)))
   den <- solve(Imat - q)
    results <- sqrt(abs(num/den) - m^2)
  results[stage,][newbornType]
@@ -632,3 +643,44 @@ age_first_reproduction(Q)
 age_first_reproduction_sd(Q)
 
 generation_time(A,B,C,c(1,3,4,5))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
