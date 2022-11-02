@@ -184,21 +184,6 @@ gam_i <- function(A,B){
   results
 }
 
-### Original version 
-gam_i_original <- function(A,B){
-  # Equation 12
-  results <- colSums(B) * scaled_rep_value(A)
-  results
-}
-
-### Comparison between versions and direct calculation. 
-### Modified version matches direct calculation for this case.
-gam_i(A,B); gam_i_original(A,B); 
-## Direct: only stage 6 has sexual reproduction 
-v = scaled_rep_value(A); sum(B[,6]*v); 
-
-
-
 g <- function(B){
   # Equation 11
   results <- colSums(B)  
@@ -219,30 +204,33 @@ pop_gen_time <- function(A, B, C){
 ########################################################
 # Eqn 22. Note, this returns a matrix where p_{i,t}
 # is the (t,i) entry of the matrix. Original and SPE 
-# SPE modified versions return the same values. 
+# modified versions return the same values. 
 ########################################################
 pit_original <- function(A,B,C, maxAge = 10){
   # Equation 22
   p <- pop_growth(A)
   #lambda
   b <- n_bj(A,B)
-  
   Imat <- diag(x = 1, dim(C))
   # Identity matrix
+  den <- rowSums(solve(Imat - (C/p)) %*% b)
+  # 
   results <- matrix(NA, nrow = maxAge + 1, ncol = nrow(A))
+  Ca = Imat;
   for (a in 0 : (maxAge)) {
     # for loop to determine the fraction of newborns in each stage
     
-    num <- (p ^ -a) %*% rowSums((C %^% a) %*% b)
-    den <- rowSums(solve(Imat - (C / p)) %*% b)
+    num <- (p ^ -a) %*% rowSums((Ca) %*% b)
+    
     x <- num/den
     
-    # print(x)
+    #print(x)
     results[a + 1,] <- x
-    
+    Ca <- C %*% Ca
   }
   results
 }
+
 
 ########################################################
 # Eqn 22. Again
@@ -318,11 +306,7 @@ life_expectancy_SD <- function(C){
   results
 }
 
-######################################
-#  SPE stopping here, Oct 24. 
-######################################
-
-Di_mat <- function(P){
+Di_mat_original <- function(P){
   # Equation 8
   
   results <- array(0, dim = c(dim(P),dim(P)[1]))
@@ -344,10 +328,22 @@ Di_mat <- function(P){
   print(res)
 }
 
-meantime <- function(P,Di_mat){
-  #Equation 9
+
+######### Calculate the D_i matrices, equation 9 
+Di_mat <- function(P){
+  results <- array(0, dim = c(dim(P),ncol(P)))
+  for (i  in 1:ncol(P)) {
+    results[,,i] = P; 
+    results[,i,i] = 0; 
+  }
+  return(results) 
+}   
+# range(Di_mat(P)-Di_mat_original(P));  ## works 
+
   
-  D <- Di_mat(P)
+meantime <- function(P){
+  #Equation 9
+   D <- Di_mat(P)
   results <- matrix(0, nrow=dim(D[,,1])[1], ncol=dim(D[,,1])[2])
   # Make new matrix 
   
@@ -358,20 +354,20 @@ meantime <- function(P,Di_mat){
     results[i,] <- (num[i,]/den[i,]) - 1
   }
   # for loop in order to use identity matrix
+  
   results[is.nan(results)] <- -1
   # -1 used because can't get to that stage
   
   return(results)
-  res <- meantime(P,Di_mat)
-  
-  print(res)
 }
 
-meantime_SD <- function(P,Di_mat){
+
+
+meantime_SD <- function(P){
   #Equation 10
   #OUTPUT DOESN'T MATCH STAGECOACH
   D <- Di_mat(P)
-  m <- meantime(P,Di_mat)
+  m <- meantime(P)
   results <- matrix(0, nrow=dim(D[,,1])[1], ncol=dim(D[,,1])[2])
   # Make new matrix 
   
@@ -388,6 +384,15 @@ meantime_SD <- function(P,Di_mat){
  results
   
 }
+
+
+
+
+
+
+
+
+
 
 total_lifeSpan <- function(P,Di_mat){
  #Equation 6
