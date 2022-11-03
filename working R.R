@@ -203,40 +203,10 @@ pop_gen_time <- function(A, B, C){
 
 ########################################################
 # Eqn 22. Note, this returns a matrix where p_{i,t}
-# is the (t,i) entry of the matrix. Original and SPE 
-# modified versions return the same values. 
+# is the (t,i) entry of the matrix. Original version and
+# this one return the same values. 
 ########################################################
-pit_original <- function(A,B,C, maxAge = 10){
-  # Equation 22
-  p <- pop_growth(A)
-  #lambda
-  b <- n_bj(A,B)
-  Imat <- diag(x = 1, dim(C))
-  # Identity matrix
-  den <- rowSums(solve(Imat - (C/p)) %*% b)
-  # 
-  results <- matrix(NA, nrow = maxAge + 1, ncol = nrow(A))
-  Ca = Imat;
-  for (a in 0 : (maxAge)) {
-    # for loop to determine the fraction of newborns in each stage
-    
-    num <- (p ^ -a) %*% rowSums((Ca) %*% b)
-    
-    x <- num/den
-    
-    #print(x)
-    results[a + 1,] <- x
-    Ca <- C %*% Ca
-  }
-  results
-}
-
-
-########################################################
-# Eqn 22. Again
-# Same results, but simpler calculation. 
-########################################################
-pit <- function(A,B,C, maxAge = 10){
+pit <- function(A,B,C, maxAge = 50){
   # Equation 22
   p <- pop_growth(A)
   #lambda
@@ -262,10 +232,9 @@ pit <- function(A,B,C, maxAge = 10){
   }
   results
 }
-range(pit(A,B,C)-pit_original(A,B,C)) # matches 
+ # range(pit(A,B,C)-pit_original(A,B,C)) # matches 
 
-
-stable_age_distribution <- function(A,B,C, maxAge = 10){
+stable_age_distribution <- function(A,B,C, maxAge = 50){
   # Equation 31
   pp <- pit(A,B,C,maxAge=maxAge)
   results <- apply(pp, 1, weighted.mean, w = stable_stage_dist(A))
@@ -273,13 +242,13 @@ stable_age_distribution <- function(A,B,C, maxAge = 10){
 }
 
 #### Same results using matrix multiplication 
-sad = function(A,B,C, maxAge=10) {
+sad = function(A,B,C, maxAge=50) {
       pp <- pit(A,B,C,maxAge=maxAge)
       w <- stable_stage_dist(A); 
       num = pp%*%w; den=sum(w); 
       return(num/den)
 }      
-stable_age_distribution(A,B,C) - sad(A,B,C); # matches 
+# stable_age_distribution(A,B,C) - sad(A,B,C); # matches 
 
 
 # Matches the fortran output for this case 
@@ -306,30 +275,7 @@ life_expectancy_SD <- function(C){
   results
 }
 
-Di_mat_original <- function(P){
-  # Equation 8
-  
-  results <- array(0, dim = c(dim(P),dim(P)[1]))
-  for (i  in 1:dim(P)[1]) {
-    for (l in 1:dim(P)[2]) {
-      for (k in 1:dim(P)[1]) {
-        if (i == l) {
-          
-          results[k,l,i] <- 0
-        }
-        else {
-          results[k,l,i] <- P[k,l]
-        }
-      }
-    }
-  }
-  return(results)
-  res <- Di_mat(P)
-  print(res)
-}
-
-
-######### Calculate the D_i matrices, equation 9 
+######### Calculate the D_i matrices, equation 8  
 Di_mat <- function(P){
   results <- array(0, dim = c(dim(P),ncol(P)))
   for (i  in 1:ncol(P)) {
@@ -340,63 +286,49 @@ Di_mat <- function(P){
 }   
 # range(Di_mat(P)-Di_mat_original(P));  ## works 
 
-  
+
+# Equation 9, subtracting 1 to match the fortran code!!  
 meantime <- function(P){
-  #Equation 9
    D <- Di_mat(P)
   results <- matrix(0, nrow=dim(D[,,1])[1], ncol=dim(D[,,1])[2])
   # Make new matrix 
-  
+  Imat <- diag(x=1, nrow(P))
   for (i in 1:dim(results)[1]) {
-    Imat <- diag(x=1, dim(D[,,i])[1])
-    num <- solve((Imat - D[,,i]) %*% (Imat - D[,,i])) 
     den <- solve(Imat - D[,,i]) 
-    results[i,] <- (num[i,]/den[i,]) - 1
+    num <- den %*% den 
+    results[i,] <- (num[i,]/den[i,])-1; 
   }
-  # for loop in order to use identity matrix
-  
   results[is.nan(results)] <- -1
   # -1 used because can't get to that stage
   
   return(results)
 }
 
-
-
+# Equation 10 ####################################
 meantime_SD <- function(P){
-  #Equation 10
-  #OUTPUT DOESN'T MATCH STAGECOACH
   D <- Di_mat(P)
-  m <- meantime(P)
-  results <- matrix(0, nrow=dim(D[,,1])[1], ncol=dim(D[,,1])[2])
-  # Make new matrix 
+  m0 <- meantime(P) ### this 'mean time' subtracts 1 to match the fortan 
+  m1 = m0 + 1 ### To match the definition of 'mean time' in eqn. 10 of the paper 
+  results <- matrix(0, nrow=nrow(P), ncol=ncol(P))
   
   for (i in 1:dim(results)[1]) {
-    Imat <- diag(x=1, dim(D[,,i])[1])
+    Imat <- diag(x=1, nrow(P))
     num <- (Imat + D[,,i]) %*% solve((Imat - D[,,i]) %*% (Imat - D[,,i]) %*% (Imat -D[,,i])) 
     den <- solve(Imat - D[,,i]) 
-    results[i,] <- (num[i,]/den[i,]) - 1
-    results[i,] <- results[i,] - (m[i,]) ^ 2
+    results[i,] <- (num[i,]/den[i,])
+    results[i,] <- sqrt(results[i,] - (m1[i,]) ^ 2) 
   }
-  # for loop in order to use identity matrix
-  #results[is.nan(results)] <- -1
+  results[is.nan(results)] <- -1
   # -1 used because can't get to that stage
- results
-  
-}
-
-
-
-
-
-
+  results[m0 < 0] <- -1  ## because if transition is impossible, SD is undefined.  
+  return(results) 
+ }
 
 
 
 
 total_lifeSpan <- function(P,Di_mat){
  #Equation 6
-
  LE <- life_expectancy(P)
  # must add each stage number to the correct vector
  MT <- meantime(P,Di_mat(P))
