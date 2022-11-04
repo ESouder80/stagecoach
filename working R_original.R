@@ -231,68 +231,58 @@ life_expectancy_SD <- function(C){
 
 Di_mat <- function(P){
   # Equation 8
-  
-  results <- array(0, dim = c(dim(P),dim(P)[1]))
-  for (i  in 1:dim(P)[1]) {
-    for (l in 1:dim(P)[2]) {
-      for (k in 1:dim(P)[1]) {
-        if (i == l) {
-          
-          results[k,l,i] <- 0
-        }
-        else {
-          results[k,l,i] <- P[k,l]
-        }
-      }
-    }
+  # Make new matrices for meantime
+  results <- array(0, dim = c(dim(P),ncol(P)))
+  for (i  in 1:ncol(P)) {
+    results[,,i] = P; 
+    results[,i,i] = 0; 
   }
-  return(results)
-  res <- Di_mat(P)
-  print(res)
+  return(results) 
 }
+ 
 
 meantime <- function(P,Di_mat){
   #Equation 9
   
   D <- Di_mat(P)
-  results <- matrix(0, nrow=dim(D[,,1])[1], ncol=dim(D[,,1])[2])
-  # Make new matrix 
+  results <- matrix(0, nrow= nrow(P), ncol= ncol(P))
+  # Make empty matrix 
   
   for (i in 1:dim(results)[1]) {
     Imat <- diag(x=1, dim(D[,,i])[1])
-    num <- solve((Imat - D[,,i]) %*% (Imat - D[,,i])) 
-    den <- solve(Imat - D[,,i]) 
+    den <- solve(Imat - D[,,i])  
+    num <- den %*% den
     results[i,] <- (num[i,]/den[i,]) - 1
   }
-  # for loop in order to use identity matrix
+  # for loop for each Di_mat
   results[is.nan(results)] <- -1
-  # -1 used because can't get to that stage
+  # -1 used because can't get to that stage from previous stage
   
   return(results)
-  res <- meantime(P,Di_mat)
   
-  print(res)
 }
 
 meantime_SD <- function(P,Di_mat){
   #Equation 10
   #OUTPUT DOESN'T MATCH STAGECOACH
   D <- Di_mat(P)
-  m <- meantime(P,Di_mat)
-  results <- matrix(0, nrow=dim(D[,,1])[1], ncol=dim(D[,,1])[2])
+  m0 <- meantime(P,Di_mat)
+  m1 <- m0 + 1
+  # m1 used to match equations from paper
+  results <- matrix(0, nrow = nrow(P), ncol= ncol(P))
   # Make new matrix 
   
   for (i in 1:dim(results)[1]) {
     Imat <- diag(x=1, dim(D[,,i])[1])
-    num <- (Imat + D[,,i]) %*% solve((Imat - D[,,i]) %*% (Imat - D[,,i]) %*% (Imat -D[,,i])) 
+    num <- (Imat + D[,,i]) %*% solve((Imat - D[,,i]) %*% (Imat - D[,,i]) %*% (Imat - D[,,i])) 
     den <- solve(Imat - D[,,i]) 
-    results[i,] <- (num[i,]/den[i,]) - 1
-    results[i,] <- results[i,] - (m[i,]) ^ 2
+    results[i,] <- (num[i,]/den[i,])
+    results[i,] <- sqrt(results[i,] - (m1[i,]) ^ 2)
   }
-  # for loop in order to use identity matrix
-  #results[is.nan(results)] <- -1
-  # -1 used because can't get to that stage
- results
+  results[is.nan(results)] <- -1
+  results[m0 < 0] <- -1
+  # Transition not defined for this so it's -1
+ return(results)
   
 }
 
