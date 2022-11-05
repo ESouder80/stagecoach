@@ -255,7 +255,7 @@ meantime <- function(P,Di_mat){
     results[i,] <- (num[i,]/den[i,]) - 1
   }
   # for loop for each Di_mat
-  results[is.nan(results)] <- -1
+  results[is.nan(results)] <- NA
   # -1 used because can't get to that stage from previous stage
   
   return(results)
@@ -279,8 +279,8 @@ meantime_SD <- function(P,Di_mat){
     results[i,] <- (num[i,]/den[i,])
     results[i,] <- sqrt(results[i,] - (m1[i,]) ^ 2)
   }
-  results[is.nan(results)] <- -1
-  results[m0 < 0] <- -1
+  results[is.nan(results)] <- NA
+  results[m0 < 0] <- NA
   # Transition not defined for this so it's -1
  return(results)
   
@@ -297,7 +297,7 @@ total_lifeSpan <- function(P,Di_mat){
    for (j in 1:dim(P)[2]) {
      results[i,j] <- MT[i,j] + LE[i] + 1
      if(i < j){
-       results[i,j] <- -1
+       results[i,j] <- NA
      }
      else{
        results[i,j] <- MT[i,j] + LE[i] + 1
