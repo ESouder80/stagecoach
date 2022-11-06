@@ -256,7 +256,7 @@ meantime <- function(P,Di_mat){
   }
   # for loop for each Di_mat
   results[is.nan(results)] <- NA
-  # -1 used because can't get to that stage from previous stage
+  # NA used because can't get to this state from previous state
   
   return(results)
   
@@ -281,7 +281,7 @@ meantime_SD <- function(P,Di_mat){
   }
   results[is.nan(results)] <- NA
   results[m0 < 0] <- NA
-  # Transition not defined for this so it's -1
+  # Transition not defined for this so it's NA
  return(results)
   
 }
@@ -292,7 +292,7 @@ total_lifeSpan <- function(P,Di_mat){
  LE <- life_expectancy(P)
  # must add each stage number to the correct vector
  MT <- meantime(P,Di_mat(P))
- results <- matrix(0,nrow = dim(P)[1],ncol = dim(P)[2])
+ results <- matrix(0,nrow = nrow(P),ncol = ncol(P))
  for (i in 1:dim(P)[1]) {
    for (j in 1:dim(P)[2]) {
      results[i,j] <- MT[i,j] + LE[i] + 1
@@ -305,17 +305,24 @@ total_lifeSpan <- function(P,Di_mat){
      }
  }
  
- # results <- -1 because it cannot be reached by the previous stage
+ # NA used because can't get to state from previous state
   results
 }
 
 
-total_lifeSpan_SD <- function(P, D_mat,stage){
+total_lifeSpan_SD <- function(P, D_mat){
   #Equation 7
-  #OUTPUT DOESN'T MATCH STAGECOACH COMPLETELY. I believe this is due to meantime_SD
-  MTSD <- meantime(P,Di_mat)
-  LESD <- life_expectancy_sd(P)[stage]
-  results <- LESD + MTSD 
+  #OUTPUT DOESN'T MATCH STAGECOACH 
+  MSD <- meantime_SD(P,Di_mat)
+  LSD <- life_expectancy_SD(P)
+  results <- matrix(0,nrow = nrow(P), ncol = ncol(P))
+  for (i in 1:nrow(P)) {
+    for (j in 1:ncol(P)) {
+      results[i,j] <- LSD[i] + MSD[i,j]  
+    }
+    
+  }
+ 
   return(results)
   
 }
