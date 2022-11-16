@@ -287,7 +287,9 @@ Di_mat <- function(P){
 # range(Di_mat(P)-Di_mat_original(P));  ## works 
 
 
-# Equation 9, subtracting 1 to match the fortran code!!  
+# Equation 9, subtracting 1 to match the fortran code!!
+# So now this is really "how much time does it take to get there?"
+# rather than "when do you get there, if you start at time 1?".   
 meantime <- function(P){
    D <- Di_mat(P)
   results <- matrix(0, nrow=dim(D[,,1])[1], ncol=dim(D[,,1])[2])
@@ -298,13 +300,14 @@ meantime <- function(P){
     num <- den %*% den 
     results[i,] <- (num[i,]/den[i,])-1; 
   }
-  results[is.nan(results)] <- -1
-  # -1 used because can't get to that stage
+  results[is.nan(results)] <- NA
+  # NA used because can't get to that stage
   
   return(results)
 }
 
 # Equation 10 ####################################
+# Output matches stagecoach where SD is defined, and correctly gives NA otherwise. 
 meantime_SD <- function(P){
   D <- Di_mat(P)
   m0 <- meantime(P) ### this 'mean time' subtracts 1 to match the fortan 
@@ -320,18 +323,15 @@ meantime_SD <- function(P){
   }
   results[is.nan(results)] <- -1
   # -1 used because can't get to that stage
-  results[m0 < 0] <- -1  ## because if transition is impossible, SD is undefined.  
+  results[m0 < 0] <- NA  ## because if transition is impossible, SD is undefined.  
   return(results) 
  }
 
-
-
-
-total_lifeSpan <- function(P,Di_mat){
- #Equation 6
+total_lifeSpan <- function(P){
+ # Equation 6, matches fortran output 
  LE <- life_expectancy(P)
  # must add each stage number to the correct vector
- MT <- meantime(P,Di_mat(P))
+ MT <- meantime(P)
  results <- matrix(0,nrow = dim(P)[1],ncol = dim(P)[2])
  for (i in 1:dim(P)[1]) {
    for (j in 1:dim(P)[2]) {
@@ -344,22 +344,23 @@ total_lifeSpan <- function(P,Di_mat){
    }
      }
  }
- 
- # results <- -1 because it cannot be reached by the previous stage
-  results
+  results[results<0] = NA;
+  return(results); 
 }
 
 
-total_lifeSpan_SD <- function(P, D_mat,stage){
-  #Equation 7
-  #OUTPUT DOESN'T MATCH STAGECOACH COMPLETELY. I believe this is due to meantime_SD
-  MTSD <- meantime(P,Di_mat)
-  LESD <- life_expectancy_sd(P)[stage]
-  results <- LESD + MTSD 
-  return(results)
-  
+total_lifeSpan_SD <- function(P){
+  #Equation 7. Matches the output to the fortran code!  
+  MSD <- meantime_SD(P)
+  LSD <- life_expectancy_SD(P)
+  results <- matrix(0,nrow = nrow(P), ncol = ncol(P))
+  for (i in 1:nrow(P)) {
+      results[i,] <- LSD[i]^2 + MSD[i,]^2  
+  }
+  return(sqrt(results)) 
 }
 
+############### SPE: OK down to here! 
 
 lx <- function (P, newbornType,MAX10 = 10) {
   # Equation 2
@@ -541,7 +542,7 @@ mean_age_residence_pop_SD <- function(A,B,C){
 
 Q_mat <- function(P,stage){
  # Equation 14
- # New tranistion matrix called Q.
+ # New transition matrix called Q.
  # Use the stage where birth occurs. For Caswell, it is only column 6
   results <- matrix(0, nrow = nrow(P), ncol = ncol(P))
   for (i in 1:dim(P)[1]) {
@@ -592,10 +593,6 @@ generation_time <- function(A,B,C,newbornType){
   results <- log(R) / log(lam)
   results
 }
-
-
-
-
 
 #########################################
 #Running program

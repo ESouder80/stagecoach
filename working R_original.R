@@ -240,10 +240,10 @@ Di_mat <- function(P){
   return(results) 
 }
  
-
-meantime <- function(P,Di_mat){
-  #Equation 9
-  
+# Equation 9, subtracting 1 to match the fortran code!!
+# So now this is really "how much time does it take to get there?"
+# rather than "when do you get there, if you start at time 1?". 
+meantime <- function(P){
   D <- Di_mat(P)
   results <- matrix(0, nrow= nrow(P), ncol= ncol(P))
   # Make empty matrix 
@@ -262,11 +262,11 @@ meantime <- function(P,Di_mat){
   
 }
 
-meantime_SD <- function(P,Di_mat){
-  #Equation 10
-  #OUTPUT DOESN'T MATCH STAGECOACH
+meantime_SD <- function(P){
+  # Equation 10
+  # Output matches stagecoach where SD is defined, and correctly gives NA otherwise. 
   D <- Di_mat(P)
-  m0 <- meantime(P,Di_mat)
+  m0 <- meantime(P)
   m1 <- m0 + 1
   # m1 used to match equations from paper
   results <- matrix(0, nrow = nrow(P), ncol= ncol(P))
@@ -310,7 +310,7 @@ total_lifeSpan <- function(P,Di_mat){
 }
 
 
-total_lifeSpan_SD <- function(P, D_mat){
+total_lifeSpan_SD <- function(P){
   #Equation 7
   #OUTPUT DOESN'T MATCH STAGECOACH 
   MSD <- meantime_SD(P,Di_mat)
