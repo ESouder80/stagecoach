@@ -184,12 +184,6 @@ gam_i <- function(A,B){
   results
 }
 
-g <- function(B){
-  # Equation 11
-  results <- colSums(B)  
-  results
-}
-
 ## Matches results of fortran code (after one typo fix in a function name) 
 pop_gen_time <- function(A, B, C){
   # Equation 26
@@ -306,8 +300,9 @@ meantime <- function(P){
   return(results)
 }
 
-# Equation 10 ####################################
-# Output matches stagecoach where SD is defined, and correctly gives NA otherwise. 
+# Equation 10 ######################################
+# The output matches fortran stagecoach where SD is 
+# defined, and correctly gives NA otherwise. 
 meantime_SD <- function(P){
   D <- Di_mat(P)
   m0 <- meantime(P) ### this 'mean time' subtracts 1 to match the fortan 
@@ -360,47 +355,56 @@ total_lifeSpan_SD <- function(P){
   return(sqrt(results)) 
 }
 
+#########################################################
+# Survivorship curve conditional on stage at birth
+# Default is to compute this for all stages, but optional
+# argument newbornTypes can limit it to only the stages 
+# that are actually possible for newborns. 
+#########################################################
+lx <- function (P, newbornTypes=NULL, max=20) {
+  # Equation 2
+  if(is.null(newbornTypes)) newbornTypes=c(1:ncol(P));  
+  res = matrix(1, max, ncol(P)); 
+  for (x in 2:max) {
+    res[x,] = colSums(P%^%x)
+  }
+  return(res[,newbornTypes])
+}
+
+
+lx_pop <- function (A,B,P,max=20) {
+  # Table 2
+  l <- lx(P,max=max)
+  b <- n_bj(A,B)
+  results = l %*% b; 
+  return(results)
+}
+
 ############### SPE: OK down to here! 
 
-lx <- function (P, newbornType,MAX10 = 10) {
-  # Equation 2
-  res <- NULL
-  for (x in 1:(MAX10)) {
-    res <- cbind(res, colSums(P %^% (x - 1))[newbornType])
-    #if (any(res < TLX)) break
-  }
-  #for loop in order to calculate the total survivorship (l(x))
-  return(res)
-  results <- lx(P,newbornType,MAX10)
-  print(results)
-}
+fx_orig <- function(B,C, newbornType,MAX10=20){
 
-
-lx_pop <- function (A,B, P,newbornType, MAX10 = 10) {
-  # Table 2
-  #RESULTS DO NOT MATCH PAPER
-  l <- lx(P,newbornType,MAX10)
-  b <- n_bj(A,B)[newbornType]
-  results <- NULL
-  for (x in 1:MAX10) {
-    results <- cbind(results, sum(l[,x] * b))
-    
-  }
- 
-  results
-}
-
-
-fx <- function(B,C, newbornType, TLX=1000,MAX10 = 10 ){
-  # Equation 13
   res <- NULL
   for (z in 1:(MAX10)) {
     res <- cbind(res, (colSums(C %^% (z - 1)[newbornType] * g(B))[newbornType]/colSums(C %^% (z-1)) [newbornType]))
-    if (any(res > TLX)) break
   }
   #for loop in order to calculate the total maternity (f(x))
   return(as.matrix(res))
 }
+
+fx = function(A,B,C,newbornTypes=NULL,max=20) {
+    # Equation 13
+    if(is.null(newbornTypes)) newbornTypes=c(1:ncol(P)); 
+    res = matrix(NA, max, ncol(P)); 
+    gamma_i = gam_i(A,B); 
+    for(x in 1:max) {
+        Cx1 = C%^%(x-1)
+        num = t(Cx1) %*% gamma_i 
+        den = colSums(Cx1); 
+        res[x,]=num/den; res[x,den==0]=0; 
+    }    
+    return(res[,newbornTypes]); 
+} 
 
 
 fx_pop <- function(A,B,C,newbornType, max10 = 10){
@@ -671,6 +675,7 @@ age_first_reproduction_sd(Q)
 
 generation_time(A,B,C,c(1,3,4,5))
 
+} 
 
 
 
