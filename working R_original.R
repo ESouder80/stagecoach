@@ -240,10 +240,10 @@ Di_mat <- function(P){
   return(results) 
 }
  
-# Equation 9, subtracting 1 to match the fortran code!!
-# So now this is really "how much time does it take to get there?"
-# rather than "when do you get there, if you start at time 1?". 
-meantime <- function(P){
+
+meantime <- function(P,Di_mat){
+  #Equation 9
+  
   D <- Di_mat(P)
   results <- matrix(0, nrow= nrow(P), ncol= ncol(P))
   # Make empty matrix 
@@ -262,11 +262,11 @@ meantime <- function(P){
   
 }
 
-meantime_SD <- function(P){
-  # Equation 10
-  # Output matches stagecoach where SD is defined, and correctly gives NA otherwise. 
+meantime_SD <- function(P,Di_mat){
+  #Equation 10
+  #OUTPUT DOESN'T MATCH STAGECOACH
   D <- Di_mat(P)
-  m0 <- meantime(P)
+  m0 <- meantime(P,Di_mat)
   m1 <- m0 + 1
   # m1 used to match equations from paper
   results <- matrix(0, nrow = nrow(P), ncol= ncol(P))
@@ -310,50 +310,48 @@ total_lifeSpan <- function(P,Di_mat){
 }
 
 
-total_lifeSpan_SD <- function(P){
+total_lifeSpan_SD <- function(P, D_mat){
   #Equation 7
-  #OUTPUT DOESN'T MATCH STAGECOACH 
+  
   MSD <- meantime_SD(P,Di_mat)
   LSD <- life_expectancy_SD(P)
   results <- matrix(0,nrow = nrow(P), ncol = ncol(P))
   for (i in 1:nrow(P)) {
     for (j in 1:ncol(P)) {
-      results[i,j] <- LSD[i] + MSD[i,j]  
+      results[i,j] <- LSD[i] ^ 2 + MSD[i,j] ^ 2  
     }
     
   }
  
-  return(results)
+  return(sqrt(results))
   
 }
 
 
-lx <- function (P, newbornType,MAX10 = 10) {
+lx <- function (P, newbornTypes = NULL, max = 20) {
   # Equation 2
-  res <- NULL
-  for (x in 1:(MAX10)) {
-    res <- cbind(res, colSums(P %^% (x - 1))[newbornType])
-    #if (any(res < TLX)) break
+  if(is.null(newbornTypes)) newbornTypes = c(1:ncol(P));
+  
+  results <- matrix(1,max,ncol(P))
+  
+  for (x in 2:(max)) {
+   results[x,] = colSums(P %^% x) 
+    
   }
   #for loop in order to calculate the total survivorship (l(x))
-  return(res)
-  results <- lx(P,newbornType,MAX10)
-  print(results)
+  return(results[,newbornTypes])
+  
 }
 
 
-lx_pop <- function (A,B, P,newbornType, MAX10 = 10) {
+lx_pop <- function (A,B, P, max = 20) {
   # Table 2
   #RESULTS DO NOT MATCH PAPER
-  l <- lx(P,newbornType,MAX10)
-  b <- n_bj(A,B)[newbornType]
-  results <- NULL
-  for (x in 1:MAX10) {
-    results <- cbind(results, sum(l[,x] * b))
-    
-  }
+  l <- lx(P,max = max)
+  b <- n_bj(A,B)
+  results = l %*% b
  
-  results
+  return(results)
 }
 
 
