@@ -355,15 +355,22 @@ lx_pop <- function (A,B, P, max = 20) {
 }
 
 
-fx <- function(B,C, newbornType, TLX=1000,MAX10 = 10 ){
+fx <- function(A,B,C, newbornTypes = NULL, max= 20 ){
   # Equation 13
-  res <- NULL
-  for (z in 1:(MAX10)) {
-    res <- cbind(res, (colSums(C %^% (z - 1)[newbornType] * g(B))[newbornType]/colSums(C %^% (z-1)) [newbornType]))
-    if (any(res > TLX)) break
+  if(is.null(newbornTypes)) newbornTypes = c(1:ncol(P));
+  
+  results <- matrix(NA, max, ncol(P));
+  gamma_i = gam_i(A,B);
+  
+  for (x in 1:max) {
+    Cx1 = C %^% (x - 1)
+    num = t(Cx1) %*% gamma_i
+    den = colSums(Cx1);
+    results[x,] = num/den;
+    results[x,den == 0] = 0
   }
   #for loop in order to calculate the total maternity (f(x))
-  return(as.matrix(res))
+  return(results[,newbornTypes])
 }
 
 
