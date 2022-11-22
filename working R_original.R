@@ -335,7 +335,7 @@ lx <- function (P, newbornTypes = NULL, max = 20) {
   results <- matrix(1,max,ncol(P))
   
   for (x in 2:(max)) {
-   results[x,] = colSums(P %^% x) 
+   results[x,] = colSums(P %^%(x-1)) 
     
   }
   #for loop in order to calculate the total survivorship (l(x))

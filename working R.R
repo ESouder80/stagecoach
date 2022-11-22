@@ -366,7 +366,7 @@ lx <- function (P, newbornTypes=NULL, max=20) {
   if(is.null(newbornTypes)) newbornTypes=c(1:ncol(P));  
   res = matrix(1, max, ncol(P)); 
   for (x in 2:max) {
-    res[x,] = colSums(P%^%x)
+    res[x,] = colSums(P%^%(x-1)) 
   }
   return(res[,newbornTypes])
 }
