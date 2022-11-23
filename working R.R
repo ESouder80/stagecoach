@@ -176,11 +176,19 @@ scaled_rep_value <- function(A){
   results
 }
 
+### Equation 12, stage-specific total fecundity in newborn-equivalents 
 ### Modified by SPE. This was not calculating eqn. 12 correctly. 
 gam_i <- function(A,B){
   # Equation 12
   v <- scaled_rep_value(A); 
   results <- t(B)%*%v; 
+  results
+}
+
+### Equation 11, stage-specific total fecundity in total offspring number 
+bet_i <- function(B){
+  # Equation 11
+  results <- colSums(B); 
   results
 }
 
@@ -392,8 +400,8 @@ fx_orig <- function(B,C, newbornType,MAX10=20){
   return(as.matrix(res))
 }
 
-fx = function(A,B,C,newbornTypes=NULL,max=20) {
-    # Equation 13
+# Equation 13, fx based on "newborn equivalents" 
+fx_weighted = function(A,B,C,newbornTypes=NULL,max=20) {
     if(is.null(newbornTypes)) newbornTypes=c(1:ncol(P)); 
     res = matrix(NA, max, ncol(P)); 
     gamma_i = gam_i(A,B); 
@@ -406,15 +414,35 @@ fx = function(A,B,C,newbornTypes=NULL,max=20) {
     return(res[,newbornTypes]); 
 } 
 
+# fx based on raw numbers of offspring.  
+fx_unweighted = function(A,B,C,newbornTypes=NULL,max=20) {
+    if(is.null(newbornTypes)) newbornTypes=c(1:ncol(P)); 
+    res = matrix(NA, max, ncol(P)); 
+    beta_i = bet_i(B); 
+    for(x in 1:max) {
+        Cx1 = C%^%(x-1)
+        num = t(Cx1) %*% beta_i 
+        den = colSums(Cx1); 
+        res[x,]=num/den; res[x,den==0]=0; 
+    }    
+    return(res[,newbornTypes]); 
+} 
 
-fx_pop <- function(A,B,C,newbornType, max10 = 10){
+# Table 2, with fx based on "newborn equivalents" 
+fx_pop_weighted <- function(A,B,C,newbornType, max10 = 10){
   # Table 2
-  #RESULTS DO NOT MATCH PAPER
-  f <- fx(B,C,newbornType)
+  f <- fx_weighted(A,B,C,newbornType)
   b <- n_bj(A,B)[newbornType]
  results <- colSums(f * b)
  results
-  
+}
+
+# Table 2, with fx based on raw numbers of offspring  
+fx_pop_unweighted <- function(A,B,C,newbornType, max10 = 10){
+  f <- fx_unweighted(A,B,C,newbornType)
+  b <- n_bj(A,B)[newbornType]
+ results <- colSums(f * b)
+ results
 }
 
 age <- function(A,B){
@@ -425,7 +453,6 @@ age <- function(A,B){
   results <- (num/den) 
   return(results)
 }
-
 
 Vx_V1 <- function(A,B,C,newbornType, MAX10 = 10){
   #Equation 32
