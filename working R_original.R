@@ -149,10 +149,11 @@ gam_i <- function(A,B){
 }
 
 
-g <- function(B){
+bet_i <- function(B){
   # Equation 11
-  results <- colSums(B)  
-  results
+  # stage specific total fecundity in total offspring number
+  results <- colSums(B);  
+  return(results)
 }
 
 pop_gen_time <- function(A, B, C){
@@ -241,7 +242,7 @@ Di_mat <- function(P){
 }
  
 
-meantime <- function(P,Di_mat){
+meantime <- function(P){
   #Equation 9
   
   D <- Di_mat(P)
@@ -262,11 +263,11 @@ meantime <- function(P,Di_mat){
   
 }
 
-meantime_SD <- function(P,Di_mat){
+meantime_SD <- function(P){
   #Equation 10
   #OUTPUT DOESN'T MATCH STAGECOACH
   D <- Di_mat(P)
-  m0 <- meantime(P,Di_mat)
+  m0 <- meantime(P)
   m1 <- m0 + 1
   # m1 used to match equations from paper
   results <- matrix(0, nrow = nrow(P), ncol= ncol(P))
@@ -286,43 +287,41 @@ meantime_SD <- function(P,Di_mat){
   
 }
 
-total_lifeSpan <- function(P,Di_mat){
+total_lifeSpan <- function(P){
  #Equation 6
 
  LE <- life_expectancy(P)
  # must add each stage number to the correct vector
- MT <- meantime(P,Di_mat(P))
+ MT <- meantime(P)
  results <- matrix(0,nrow = nrow(P),ncol = ncol(P))
  for (i in 1:dim(P)[1]) {
    for (j in 1:dim(P)[2]) {
      results[i,j] <- MT[i,j] + LE[i] + 1
      if(i < j){
-       results[i,j] <- NA
+       results[i,j] <- -1
      }
      else{
        results[i,j] <- MT[i,j] + LE[i] + 1
    }
      }
  }
- 
+ results[results < 0] < NA
  # NA used because can't get to state from previous state
-  results
+  return(results)
 }
 
 
-total_lifeSpan_SD <- function(P, D_mat){
+total_lifeSpan_SD <- function(P){
   #Equation 7
   
-  MSD <- meantime_SD(P,Di_mat)
-  LSD <- life_expectancy_SD(P)
+  m <- meantime_SD(P)
+  l <- life_expectancy_SD(P)
   results <- matrix(0,nrow = nrow(P), ncol = ncol(P))
   for (i in 1:nrow(P)) {
-    for (j in 1:ncol(P)) {
-      results[i,j] <- LSD[i] ^ 2 + MSD[i,j] ^ 2  
+    
+      results[i,] <- l[i] ^ 2 + m[i,] ^ 2  
     }
     
-  }
- 
   return(sqrt(results))
   
 }
@@ -330,15 +329,16 @@ total_lifeSpan_SD <- function(P, D_mat){
 
 lx <- function (P, newbornTypes = NULL, max = 20) {
   # Equation 2
+  # newbornTypes if limiting to stages where newborns are possible
   if(is.null(newbornTypes)) newbornTypes = c(1:ncol(P));
   
   results <- matrix(1,max,ncol(P))
   
   for (x in 2:(max)) {
-   results[x,] = colSums(P %^%(x-1)) 
+   results[x,] = colSums(P %^% (x - 1)) 
     
   }
-  #for loop in order to calculate the total survivorship (l(x))
+  # for loop 
   return(results[,newbornTypes])
   
 }
@@ -346,17 +346,18 @@ lx <- function (P, newbornTypes = NULL, max = 20) {
 
 lx_pop <- function (A,B, P, max = 20) {
   # Table 2
-  #RESULTS DO NOT MATCH PAPER
+  
   l <- lx(P,max = max)
   b <- n_bj(A,B)
-  results = l %*% b
+  results = l %*% b;
  
   return(results)
 }
 
 
-fx <- function(A,B,C, newbornTypes = NULL, max= 20 ){
+fx_weighted <- function(A,B,C, newbornTypes = NULL, max= 20 ){
   # Equation 13
+  # based on "newborn equivalents"
   if(is.null(newbornTypes)) newbornTypes = c(1:ncol(P));
   
   results <- matrix(NA, max, ncol(P));
@@ -365,6 +366,7 @@ fx <- function(A,B,C, newbornTypes = NULL, max= 20 ){
   for (x in 1:max) {
     Cx1 = C %^% (x - 1)
     num = t(Cx1) %*% gamma_i
+    # Transpose used here
     den = colSums(Cx1);
     results[x,] = num/den;
     results[x,den == 0] = 0
@@ -373,15 +375,41 @@ fx <- function(A,B,C, newbornTypes = NULL, max= 20 ){
   return(results[,newbornTypes])
 }
 
-
-fx_pop <- function(A,B,C,newbornType, max10 = 10){
-  # Table 2
-  #RESULTS DO NOT MATCH PAPER
-  f <- fx(B,C,newbornType)
-  b <- n_bj(A,B)[newbornType]
- results <- colSums(f * b)
- results
+fx_unweighted <- function(A,B,C,newbornTypes = NULL, max = 20){
+  # Equation 13 
+  # based on raw numbers of offspring
+  if(is.null(newbornTypes)) newbornTypes = c(1:ncol(P));
+  # newbornTypes if only want stages that can reproduce
   
+  results <- matrix(NA, max, ncol(P));
+  beta_i <- bet_i(B);
+  
+  for(x in 1:max){
+    Cx1 <- C %^% (x - 1)
+    num <- t(Cx1) %*% beta_i
+    den <- colSums(Cx1);
+    results[x,] <- num/den;
+    results[x, den == 0] = 0
+  }
+  return(results[,newbornTypes])
+}
+
+fx_pop_weighted <- function(A,B,C, max = 20){
+  # Table 2
+  # Based on "newborn equivalents"
+  f <- fx_weighted(A,B,C)
+  b <- n_bj(A,B)
+ results <- f %*% b
+ return(results)
+}
+
+fx_pop_unweighted <- function(A,B,C, max = 20){
+  # Table 2
+  # Based on raw numbers
+  f <-fx_unweighted(A,B,C)
+  b <- n_bj(A,B)
+  results <- f %*% b
+  return(results)
 }
 
 age <- function(A,B){
