@@ -388,17 +388,16 @@ lx_pop <- function (A,B,P,max=20) {
   return(results)
 }
 
-############### SPE: OK down to here! 
+lx_pop_v2 <- function(A,B,P,max=20) {
+    n = n_bj(A,B); 
+    lx = numeric(max); lx[1]=1;
+    for(k in 2:max) {
+            n = P%*%n; 
+            lx[k]=sum(n)
+    }        
+    return(lx)
+}    
 
-fx_orig <- function(B,C, newbornType,MAX10=20){
-
-  res <- NULL
-  for (z in 1:(MAX10)) {
-    res <- cbind(res, (colSums(C %^% (z - 1)[newbornType] * g(B))[newbornType]/colSums(C %^% (z-1)) [newbornType]))
-  }
-  #for loop in order to calculate the total maternity (f(x))
-  return(as.matrix(res))
-}
 
 # Equation 13, fx based on "newborn equivalents" 
 fx_weighted = function(A,B,C,newbornTypes=NULL,max=20) {
@@ -428,22 +427,29 @@ fx_unweighted = function(A,B,C,newbornTypes=NULL,max=20) {
     return(res[,newbornTypes]); 
 } 
 
+############## SPE, OK down to here 
+
+
 # Table 2, with fx based on "newborn equivalents" 
-fx_pop_weighted <- function(A,B,C,newbornType, max10 = 10){
+fx_pop_weighted <- function(A,B,C, max = 20){
   # Table 2
-  f <- fx_weighted(A,B,C,newbornType)
-  b <- n_bj(A,B)[newbornType]
- results <- colSums(f * b)
- results
+  f <- fx_weighted(A,B,C,newbornTypes=c(1:ncol(P)),max=max)
+  b <- n_bj(A,B)
+  results <- (f %*% b)
+  results
 }
 
-# Table 2, with fx based on raw numbers of offspring  
-fx_pop_unweighted <- function(A,B,C,newbornType, max10 = 10){
-  f <- fx_unweighted(A,B,C,newbornType)
-  b <- n_bj(A,B)[newbornType]
- results <- colSums(f * b)
- results
+# Table 2, with fx based on raw numbers of offspring 
+fx_pop_unweighted <- function(A,B,C, max = 20){
+  # Table 2
+  f <- fx_unweighted(A,B,C,newbornTypes=c(1:ncol(P)),max=max)
+  b <- n_bj(A,B)
+  results <- (f %*% b)
+  results
 }
+
+
+
 
 age <- function(A,B){
   # scaling the reproductive value so sum v * bj = 1
