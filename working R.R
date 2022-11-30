@@ -10,7 +10,6 @@
 #############################################################
 
 rm(list=ls(all=TRUE)); 
-
 library(readxl)
 library(Matrix)
 library(expm)
@@ -19,17 +18,19 @@ USER = "Steve"; ## variable to flag where the data files are.
 
 if(USER == "Steve"){
     home = "c:/repos/stagecoach"; setwd(home); 
-    Caswell_A <- read_excel("Caswell_A.xlsx",sheet = 1)
-    Caswell_P <- read_excel("Caswell_P.xlsx")
-    Caswell_B <- read_excel("Caswell_B.xlsx")
-    Fission <- read_excel("Caswell_F.xlsx")
-} else {
-    Caswell_A <- read_excel("C:/Users/Erin/Desktop/Caswell_A.xlsx",sheet = 1)
-    Caswell_P <- read_excel("C:/Users/Erin/Desktop/Caswell_P.xlsx")
-    Caswell_B <- read_excel("C:/Users/Erin/Desktop/Caswell_B.xlsx")
-    Fission <- read_excel("C:/Users/Erin/Desktop/Caswell_F.xlsx")
-} 
+    }else{
+    home = "C:/Users/Erin/Desktop"
+}    
+setwd(home); 
+## source("working R.R"); 
+   
     
+Caswell_A <- read_excel("Caswell_A.xlsx",sheet = 1)
+Caswell_P <- read_excel("Caswell_P.xlsx")
+Caswell_B <- read_excel("Caswell_B.xlsx")
+Fission <- read_excel("Caswell_F.xlsx")
+
+  
 A <- as.matrix(Caswell_P + Caswell_B + Fission)
 B <- as.matrix(Caswell_B)
 C <- as.matrix(Caswell_P + Fission)
@@ -177,7 +178,6 @@ scaled_rep_value <- function(A){
 }
 
 ### Equation 12, stage-specific total fecundity in newborn-equivalents 
-### Modified by SPE. This was not calculating eqn. 12 correctly. 
 gam_i <- function(A,B){
   # Equation 12
   v <- scaled_rep_value(A); 
@@ -398,58 +398,55 @@ lx_pop_v2 <- function(A,B,P,max=20) {
     return(lx)
 }    
 
-
 # Equation 13, fx based on "newborn equivalents" 
-fx_weighted = function(A,B,C,newbornTypes=NULL,max=20) {
+fx = function(A,B,C,newbornTypes=NULL,max=20,weighted=FALSE) {
     if(is.null(newbornTypes)) newbornTypes=c(1:ncol(P)); 
     res = matrix(NA, max, ncol(P)); 
+    if(weighted) wts = gam_i(A,B); 
+    if(!weighted) wts = bet_i(B); 
     gamma_i = gam_i(A,B); 
     for(x in 1:max) {
-        Cx1 = C%^%(x-1)
-        num = t(Cx1) %*% gamma_i 
+        Cx1 = C%^%(x-1); 
+        num = t(Cx1) %*% wts; 
         den = colSums(Cx1); 
         res[x,]=num/den; res[x,den==0]=0; 
     }    
     return(res[,newbornTypes]); 
 } 
 
-# fx based on raw numbers of offspring.  
-fx_unweighted = function(A,B,C,newbornTypes=NULL,max=20) {
-    if(is.null(newbornTypes)) newbornTypes=c(1:ncol(P)); 
-    res = matrix(NA, max, ncol(P)); 
-    beta_i = bet_i(B); 
-    for(x in 1:max) {
-        Cx1 = C%^%(x-1)
-        num = t(Cx1) %*% beta_i 
-        den = colSums(Cx1); 
-        res[x,]=num/den; res[x,den==0]=0; 
-    }    
-    return(res[,newbornTypes]); 
-} 
 
-############## SPE, OK down to here 
-
-
-# Table 2, with fx based on "newborn equivalents" 
-fx_pop_weighted <- function(A,B,C, max = 20){
-  # Table 2
-  f <- fx_weighted(A,B,C,newbornTypes=c(1:ncol(P)),max=max)
-  b <- n_bj(A,B)
-  results <- (f %*% b)
-  results
-}
-
-# Table 2, with fx based on raw numbers of offspring 
-fx_pop_unweighted <- function(A,B,C, max = 20){
-  # Table 2
-  f <- fx_unweighted(A,B,C,newbornTypes=c(1:ncol(P)),max=max)
-  b <- n_bj(A,B)
-  results <- (f %*% b)
-  results
+fx_pop = function(A,B,C,max=20,weighted=FALSE) {
+    f <- fx(A,B,C,newbornTypes=c(1:ncol(P)),max=max,weighted=weighted)
+    b <- n_bj(A,B)
+    results <- (f %*% b)
+    results
 }
 
 
+##### R0 for each newborn type 
+net_rep <- function(B, C, weighted=FALSE,newbornTypes=NULL){
+  # Equation 17
+  
+  if(is.null(newbornTypes)) newbornTypes=c(1:ncol(C)); 
+  Imat <- diag(dim(C)[1])
+  N <- solve(Imat - C)
+  if(weighted) wts = gam_i(A,B); 
+  if(!weighted) wts = bet_i(B); 
+  results <- t(N)%*%wts; 
+  results[newbornTypes]; 
+}
 
+##### Population R0 
+net_rep_pop <- function(A,B,C,weighted=FALSE){
+  #Table 2
+  R <- net_rep(B, C, weighted=weighted,newbornTypes=c(1:ncol(C)))
+  b <- n_bj(A,B)
+  results <- sum(R *b)
+ results
+}
+
+################ OK down to here 
+if(FALSE) {
 
 age <- function(A,B){
   # scaling the reproductive value so sum v * bj = 1
@@ -486,24 +483,6 @@ Vx_V1_pop <- function(A,B,C,newbornType, MAX10 = 10){
  results
 }
 
-
-
-net_rep <- function(B, C, newbornType){
-  # Equation 17
-  Imat <- diag(dim(C)[1])
-  y <- g(B)
-  results <- colSums(solve(Imat - C) * y)[newbornType]
-  results
-}
-
-
-net_rep_pop <- function(A,B,C,newbornType){
-  #Table 2
-  R <- net_rep(B,C,newbornType)
-  b <- n_bj(A,B)[newbornType]
-  results <- sum(R * b)
- results
-}
 
 average_age_production <- function(A,B,C,newbornType){
   # Equation 27
