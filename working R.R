@@ -24,7 +24,6 @@ if(USER == "Steve"){
 setwd(home); 
 ## source("working R.R"); 
    
-    
 Caswell_A <- read_excel("Caswell_A.xlsx",sheet = 1)
 Caswell_P <- read_excel("Caswell_P.xlsx")
 Caswell_B <- read_excel("Caswell_B.xlsx")
@@ -94,9 +93,10 @@ elasticity_mat <- function(A){
   Re(results)
 }
 
-############################################# 
+################################################## 
 ## "Sanity check" - compare sens and elas 
-## with Steve's standard code. All OK. 
+## functions with Steve's standard code. All OK. 
+#################################################
 
 sens_and_elas = function(L) {
     x <- eigen(L) 
@@ -134,7 +134,7 @@ n_bj <- function(A,B){
   results
 }
 
-############## Matches results from CE92 fortran code 
+############## Matches results from fortran code 
 age_in_stage <- function(A, B, C){
   # Equation 23
   # Using matrix C which is P + F
@@ -192,19 +192,25 @@ bet_i <- function(B){
   results
 }
 
-## Matches results of fortran code (after one typo fix in a function name) 
-pop_gen_time <- function(A, B, C){
-  # Equation 26
-  # sum the total of mean ages, stable stage vectors, and gamma multiplied 
-  # and divide by the sum of stable stage vectors and gamma in order to produce 
-  num <- sum(age_in_stage(A,B,C) * stable_stage_dist(A) * gam_i(A,B)) 
-  den <- sum(stable_stage_dist(A) * gam_i(A,B))
+## Matches results of fortran code 
+pop_gen_time <- function(A, B, C, weighted = TRUE){
+  # Equation 26 when weighted == TRUE. Otherwise treats all kids as equals.
+  # The fortran uses weighted == TRUE, hence the default here.  
+  # Sum the total of mean ages, stable stage vectors, and gamma multiplied 
+  # and divide by the sum of stable stage vectors and gamma to produce Abar 
+  
+  if(weighted) wts = gam_i(A,B); 
+  if(!weighted) wts = bet_i(B); 
+  
+  num <- sum(age_in_stage(A,B,C) * stable_stage_dist(A) * wts) 
+  den <- sum(stable_stage_dist(A) * wts)
   results <- num/den
   results
 }
 
 ########################################################
-# Eqn 22. Note, this returns a matrix where p_{i,t}
+# Eqn 22, fraction of age t individuals in stage i. 
+# Note, this returns a matrix where p_{i,t}
 # is the (t,i) entry of the matrix. Original version and
 # this one return the same values. 
 ########################################################
@@ -360,7 +366,10 @@ total_lifeSpan_SD <- function(P){
   for (i in 1:nrow(P)) {
       results[i,] <- LSD[i]^2 + MSD[i,]^2  
   }
-  return(sqrt(results)) 
+  results <- sqrt(results); 
+  CTL = total_lifeSpan(P); 
+  results[is.na(CTL)] = NA; # getting to target state is impossible
+  return(results) 
 }
 
 #########################################################
@@ -695,43 +704,3 @@ age_first_reproduction_sd(Q)
 generation_time(A,B,C,c(1,3,4,5))
 
 } 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
