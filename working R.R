@@ -411,7 +411,7 @@ lx_pop_v2 <- function(A,B,P,max=20) {
 }    
 
 ## Equation 13, fx based on raw counts or newborn equivalents (if weighted==TRUE) 
-## This is right and matches the fortan. 
+## This is right and the fortan is wrong 
 fx = function(A,B,C,newbornTypes=NULL,max=20,weighted=FALSE) {
     if(is.null(newbornTypes)) newbornTypes=c(1:ncol(P)); 
     res = matrix(NA, max, ncol(P)); 
@@ -461,9 +461,53 @@ net_rep_pop <- function(A,B,C,weighted=FALSE){
  results
 }
 
-################ OK down to here 
-if(FALSE) {
 
+mean_age_residence <- function(C){
+ # Equation 29
+ # Mean age of residence for each stage 
+ #Need to do by newbornType and make NaN = 0
+Imat <- diag(dim(C)[1])
+# Identity matrix
+num <- solve((Imat - C) %^% 2)
+den <- solve(Imat - C)
+results <- (num/den)
+results[is.nan(results)] <- 0
+results
+}
+
+mean_age_residence_SD <- function(C){
+  # Equation 30
+  #Need to fix this so it just gives the newbornTypes 1,3,4,5
+  
+  S <- mean_age_residence(C,newbornType)
+  Imat <- diag(dim(C)[1])
+  # identity matrix
+  num <- (Imat + C) %*% solve((Imat - C) %^% 3)
+  den <- solve(Imat - C)
+  results <- abs(sqrt((num / den) - S ^ 2))
+  results[is.nan(results)] <- 0
+ results
+  
+}
+
+
+
+
+mean_age_residence_pop <- function(A,B,C){
+  #Table 2
+  bj <- n_bj(A,B)
+  Imat <- diag(dim(C)[1])
+  num <- solve((Imat - C) %^% 2) %*% bj
+  den <- solve(Imat - C) %*% bj
+  results <- num/den
+  results
+  
+}
+
+
+
+
+################ OK down to here 
 age <- function(A,B){
   # scaling the reproductive value so sum v * bj = 1
   #this becomes first value in the loop for Vx_V1
@@ -503,7 +547,7 @@ Vx_V1_pop <- function(A,B,C,newbornType, MAX10 = 10){
 average_age_production <- function(A,B,C,newbornType){
   # Equation 27
   Imat <- diag(dim(C)[1])
-  num <- sapply(newbornType, function(x) colSums(solve((Imat - C) %^% 2))  %*% colSums(Gammai(A,B)))
+  num <- sapply(newbornType, function(x) colSums(solve((Imat - C) %^% 2))  %*% colSums(gam_i(A,B)))
   den <- net_rep(A,B,C,newbornType)
   results <- num/den
   results[newbornType]
