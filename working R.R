@@ -369,6 +369,8 @@ total_lifeSpan_SD <- function(P){
 # argument newbornTypes can limit it to only the stages 
 # that are actually possible for newborns. 
 #########################################################
+
+### This is right and matches the fortran 
 lx <- function (P, newbornTypes=NULL, max=20) {
   # Equation 2
   if(is.null(newbornTypes)) newbornTypes=c(1:ncol(P));  
@@ -379,7 +381,7 @@ lx <- function (P, newbornTypes=NULL, max=20) {
   return(res[,newbornTypes])
 }
 
-
+### This is right, and the fortran is wrong 
 lx_pop <- function (A,B,P,max=20) {
   # Table 2
   l <- lx(P,max=max)
@@ -388,6 +390,7 @@ lx_pop <- function (A,B,P,max=20) {
   return(results)
 }
 
+### This is also right, and the fortran is wrong 
 lx_pop_v2 <- function(A,B,P,max=20) {
     n = n_bj(A,B); 
     lx = numeric(max); lx[1]=1;
@@ -398,7 +401,8 @@ lx_pop_v2 <- function(A,B,P,max=20) {
     return(lx)
 }    
 
-# Equation 13, fx based on "newborn equivalents" 
+## Equation 13, fx based on raw counts or newborn equivalents (if weighted==TRUE) 
+## This is right and matches the fortan. 
 fx = function(A,B,C,newbornTypes=NULL,max=20,weighted=FALSE) {
     if(is.null(newbornTypes)) newbornTypes=c(1:ncol(P)); 
     res = matrix(NA, max, ncol(P)); 
@@ -415,6 +419,7 @@ fx = function(A,B,C,newbornTypes=NULL,max=20,weighted=FALSE) {
 } 
 
 
+### This is right, and the fortran is wrong 
 fx_pop = function(A,B,C,max=20,weighted=FALSE) {
     f <- fx(A,B,C,newbornTypes=c(1:ncol(P)),max=max,weighted=weighted)
     b <- n_bj(A,B)
@@ -424,6 +429,7 @@ fx_pop = function(A,B,C,max=20,weighted=FALSE) {
 
 
 ##### R0 for each newborn type 
+### This is right and matches the fortran 
 net_rep <- function(B, C, weighted=FALSE,newbornTypes=NULL){
   # Equation 17
   
@@ -436,7 +442,8 @@ net_rep <- function(B, C, weighted=FALSE,newbornTypes=NULL){
   results[newbornTypes]; 
 }
 
-##### Population R0 
+### Population R0
+### This is right and matches the fortran  
 net_rep_pop <- function(A,B,C,weighted=FALSE){
   #Table 2
   R <- net_rep(B, C, weighted=weighted,newbornTypes=c(1:ncol(C)))
