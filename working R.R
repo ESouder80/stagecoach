@@ -185,14 +185,14 @@ gam_i <- function(A,B){
   results
 }
 
-### Equation 11, stage-specific total fecundity in total offspring number 
+### Equation 11, stage-specific total fecundity in raw offspring numbers 
 bet_i <- function(B){
   # Equation 11
   results <- colSums(B); 
   results
 }
 
-## Matches results of fortran code 
+## Matches results of fortran code for Abar 
 pop_gen_time <- function(A, B, C, weighted = TRUE){
   # Equation 26 when weighted == TRUE. Otherwise treats all kids as equals.
   # The fortran uses weighted == TRUE, hence the default here.  
@@ -259,6 +259,7 @@ sad = function(A,B,C, maxAge=50) {
 # stable_age_distribution(A,B,C) - sad(A,B,C); # matches 
 
 
+# Expected remaining lifespan, conditional on current state 
 # Matches the fortran output for this case 
 life_expectancy <- function(C){
   # Equation 3
@@ -270,6 +271,7 @@ life_expectancy <- function(C){
   results
 }
 
+# SD of remaining lifespan, conditional on current state 
 # Matches the fortran output for this case 
 life_expectancy_SD <- function(C){
   # Equation 5
@@ -294,10 +296,11 @@ Di_mat <- function(P){
 }   
 # range(Di_mat(P)-Di_mat_original(P));  ## works 
 
-
+#####################################################################
 # Equation 9, subtracting 1 to match the fortran code!!
 # So now this is really "how much time does it take to get there?"
 # rather than "when do you get there, if you start at time 1?".   
+######################################################################
 meantime <- function(P){
    D <- Di_mat(P)
   results <- matrix(0, nrow=dim(D[,,1])[1], ncol=dim(D[,,1])[2])
@@ -359,7 +362,7 @@ total_lifeSpan <- function(P){
 
 
 total_lifeSpan_SD <- function(P){
-  #Equation 7. Matches the output to the fortran code!  
+  #Equation 7. Matches the output of the fortran code!  
   MSD <- meantime_SD(P)
   LSD <- life_expectancy_SD(P)
   results <- matrix(0,nrow = nrow(P), ncol = ncol(P))
@@ -379,7 +382,7 @@ total_lifeSpan_SD <- function(P){
 # that are actually possible for newborns. 
 #########################################################
 
-### This is right and matches the fortran 
+### This is right, and the fortran is wrong, for >1 newborn type 
 lx <- function (P, newbornTypes=NULL, max=20) {
   # Equation 2
   if(is.null(newbornTypes)) newbornTypes=c(1:ncol(P));  
@@ -411,7 +414,7 @@ lx_pop_v2 <- function(A,B,P,max=20) {
 }    
 
 ## Equation 13, fx based on raw counts or newborn equivalents (if weighted==TRUE) 
-## This is right and the fortan is wrong 
+## This is right, and the fortan is wrong, for >1 newborn type 
 fx = function(A,B,C,newbornTypes=NULL,max=20,weighted=FALSE) {
     if(is.null(newbornTypes)) newbornTypes=c(1:ncol(P)); 
     res = matrix(NA, max, ncol(P)); 
@@ -437,7 +440,7 @@ fx_pop = function(A,B,C,max=20,weighted=FALSE) {
 }
 
 
-##### R0 for each newborn type 
+##### R0(j) for each initial state j (can specify newborn types).  
 ### This is right and matches the fortran 
 net_rep <- function(B, C, weighted=FALSE,newbornTypes=NULL){
   # Equation 17
@@ -460,6 +463,50 @@ net_rep_pop <- function(A,B,C,weighted=FALSE){
   results <- sum(R *b)
  results
 }
+
+### Mu_1 definition of generation time 
+average_age_production <- function(A,B,C,weighted=FALSE, newbornTypes=NULL){
+  # Equation 27
+  if(is.null(newbornTypes)) newbornTypes=c(1:ncol(C)); 
+  if(weighted) wts = gam_i(A,B); 
+  if(!weighted) wts = bet_i(B); 
+ 
+  Imat <- diag(dim(C)[1])
+  N = solve(Imat-C)
+  num = t(N%*%N)%*%wts; 
+  den <- net_rep(B,C,weighted=weighted)
+  results <- num/den
+  results[newbornTypes]
+}
+
+### Variance in age of offspring production 
+average_age_production_SD <- function(A,B,C,weighted=FALSE, newbornTypes=NULL){
+  # Equation 28
+  if(is.null(newbornTypes)) newbornTypes=c(1:ncol(C)); 
+  if(weighted) wts = gam_i(A,B); 
+  if(!weighted) wts = bet_i(B); 
+  Imat <- diag(dim(C)[1])
+  N = solve(Imat-C); 
+  U = (Imat + C)%*%N%*%N%*%N; 
+  num = t(U)%*%wts;   
+  den <- net_rep(B,C,weighted=weighted)
+  results2 = num/den - average_age_production(A,B,C,weighted=weighted)^2 
+  results = sqrt(results2); 
+  results[newbornTypes]
+}
+
+average_age_production_pop <- function(A,B,C,weighted=FALSE){
+  if(weighted) wts = gam_i(A,B); 
+  if(!weighted) wts = bet_i(B); 
+  Imat <- diag(dim(C)[1])
+  N = solve(Imat-C); 
+  num = t(N%*%N)%*%wts; 
+  b <- n_bj(A,B);
+  results = sum(num*b)/net_rep_pop(A,B,C,weighted=weighted) 
+  results
+}    
+    
+############ OK DOWN TO HERE, SPE Dec 2. 
 
 
 mean_age_residence <- function(C){
@@ -490,9 +537,6 @@ mean_age_residence_SD <- function(C){
   
 }
 
-
-
-
 mean_age_residence_pop <- function(A,B,C){
   #Table 2
   bj <- n_bj(A,B)
@@ -505,9 +549,9 @@ mean_age_residence_pop <- function(A,B,C){
 }
 
 
-
-
 ################ OK down to here 
+
+
 age <- function(A,B){
   # scaling the reproductive value so sum v * bj = 1
   #this becomes first value in the loop for Vx_V1
@@ -543,65 +587,7 @@ Vx_V1_pop <- function(A,B,C,newbornType, MAX10 = 10){
  results
 }
 
-
-average_age_production <- function(A,B,C,newbornType){
-  # Equation 27
-  Imat <- diag(dim(C)[1])
-  num <- sapply(newbornType, function(x) colSums(solve((Imat - C) %^% 2))  %*% colSums(gam_i(A,B)))
-  den <- net_rep(A,B,C,newbornType)
-  results <- num/den
-  results[newbornType]
-}
-
-average_age_production_SD <- function(A,B,C,newbornType){
-  # Equation 28
-  Imat <- diag(dim(C)[1])
-  num <- sapply(newbornType, function(x) colSums((Imat + C) %*% (solve(Imat - C) %^% 3)) %*% colSums(Gammai(A,B)))
-  den <- net_rep(A,B,C,newbornType)
-  results <- sqrt((num/den) - ((average_age_production(A,B,C,newbornType)) ^ 2))
-  results[newbornType]
-}
-
-mean_age_residence <- function(C){
- # Equation 29
- # Mean age of residence for each stage 
- #Need to do by newbornType and make NaN = 0
-Imat <- diag(dim(C)[1])
-# Identity matrix
-num <- solve((Imat - C) %^% 2)
-den <- solve(Imat - C)
-results <- (num/den)
-results[is.nan(results)] <- 0
-results
-}
-
-mean_age_residence_SD <- function(C){
-  # Equation 30
-  #Need to fix this so it just gives the newbornTypes 1,3,4,5
-  
-  S <- mean_age_residence(C,newbornType)
-  Imat <- diag(dim(C)[1])
-  # identity matrix
-  num <- (Imat + C) %*% solve((Imat - C) %^% 3)
-  den <- solve(Imat - C)
-  results <- abs(sqrt((num / den) - S ^ 2))
-  results[is.nan(results)] <- 0
- results
-  
-}
-
-mean_age_residence_pop <- function(A,B,C){
-  #Table 2
-  bj <- n_bj(A,B)
-  Imat <- diag(dim(C)[1])
-  num <- solve((Imat - C) %^% 2) %*% bj
-  den <- solve(Imat - C) %*% bj
-  results <- num/den
-  results
-  
-}
-
-
+ 
 mean_age_residence_pop_SD <- function(A,B,C){
   #Table 2
   #DOESN'T MATCH OUTPUT
@@ -670,6 +656,7 @@ generation_time <- function(A,B,C,newbornType){
   results
 }
 
+if(FALSE) {
 #########################################
 #Running program
 
@@ -747,4 +734,4 @@ age_first_reproduction_sd(Q)
 
 generation_time(A,B,C,c(1,3,4,5))
 
-} 
+}

@@ -51,7 +51,7 @@ meantime(P);  # matches lines 99 - 144, "mean time to I"
               
 meantime_SD(P); # matches lines 99-144, Std. Dev. of time to I 
 
-total_lifeSpan(P); # What CE92 call 'conditional total lifespan' 
+total_lifeSpan(P);      # What CE92 call 'conditional total lifespan' 
 total_lifeSpan_SD(P);   # These two match the fortran output lines 99-144       
 
 ############################################################# 
@@ -73,7 +73,10 @@ total_lifeSpan_SD(P);   # These two match the fortran output lines 99-144
 net_rep(B,C); # matches fortran net reproductive rates R0(j), with the default weighted=FALSE 
 net_rep_pop(A,B,C); # matches population R0, line 258 of the fortran output 
 
+average_age_production(A,B,C,weighted=TRUE,newbornTypes=c(1,3,4,5));  # matches the fortran output for MU1 
+average_age_production_SD(A,B,C,weighted=TRUE,newbornTypes=c(1,3,4,5)); # matches the fortran output for SD 
 
+average_age_production_pop(A,B,C,weighted=TRUE); # matches population output for population MU1, line 259. 
 
 
 
