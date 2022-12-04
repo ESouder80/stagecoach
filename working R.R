@@ -24,7 +24,6 @@ if(USER == "Steve"){
 setwd(home); 
 ## source("working R.R"); 
    
-    
 Caswell_A <- read_excel("Caswell_A.xlsx",sheet = 1)
 Caswell_P <- read_excel("Caswell_P.xlsx")
 Caswell_B <- read_excel("Caswell_B.xlsx")
@@ -94,9 +93,10 @@ elasticity_mat <- function(A){
   Re(results)
 }
 
-############################################# 
+################################################## 
 ## "Sanity check" - compare sens and elas 
-## with Steve's standard code. All OK. 
+## functions with Steve's standard code. All OK. 
+#################################################
 
 sens_and_elas = function(L) {
     x <- eigen(L) 
@@ -134,7 +134,7 @@ n_bj <- function(A,B){
   results
 }
 
-############## Matches results from CE92 fortran code 
+############## Matches results from fortran code 
 age_in_stage <- function(A, B, C){
   # Equation 23
   # Using matrix C which is P + F
@@ -185,26 +185,32 @@ gam_i <- function(A,B){
   results
 }
 
-### Equation 11, stage-specific total fecundity in total offspring number 
+### Equation 11, stage-specific total fecundity in raw offspring numbers 
 bet_i <- function(B){
   # Equation 11
   results <- colSums(B); 
   results
 }
 
-## Matches results of fortran code (after one typo fix in a function name) 
-pop_gen_time <- function(A, B, C){
-  # Equation 26
-  # sum the total of mean ages, stable stage vectors, and gamma multiplied 
-  # and divide by the sum of stable stage vectors and gamma in order to produce 
-  num <- sum(age_in_stage(A,B,C) * stable_stage_dist(A) * gam_i(A,B)) 
-  den <- sum(stable_stage_dist(A) * gam_i(A,B))
+## Matches results of fortran code for Abar 
+pop_gen_time <- function(A, B, C, weighted = TRUE){
+  # Equation 26 when weighted == TRUE. Otherwise treats all kids as equals.
+  # The fortran uses weighted == TRUE, hence the default here.  
+  # Sum the total of mean ages, stable stage vectors, and gamma multiplied 
+  # and divide by the sum of stable stage vectors and gamma to produce Abar 
+  
+  if(weighted) wts = gam_i(A,B); 
+  if(!weighted) wts = bet_i(B); 
+  
+  num <- sum(age_in_stage(A,B,C) * stable_stage_dist(A) * wts) 
+  den <- sum(stable_stage_dist(A) * wts)
   results <- num/den
   results
 }
 
 ########################################################
-# Eqn 22. Note, this returns a matrix where p_{i,t}
+# Eqn 22, fraction of age t individuals in stage i. 
+# Note, this returns a matrix where p_{i,t}
 # is the (t,i) entry of the matrix. Original version and
 # this one return the same values. 
 ########################################################
@@ -253,6 +259,7 @@ sad = function(A,B,C, maxAge=50) {
 # stable_age_distribution(A,B,C) - sad(A,B,C); # matches 
 
 
+# Expected remaining lifespan, conditional on current state 
 # Matches the fortran output for this case 
 life_expectancy <- function(C){
   # Equation 3
@@ -264,6 +271,7 @@ life_expectancy <- function(C){
   results
 }
 
+# SD of remaining lifespan, conditional on current state 
 # Matches the fortran output for this case 
 life_expectancy_SD <- function(C){
   # Equation 5
@@ -288,10 +296,11 @@ Di_mat <- function(P){
 }   
 # range(Di_mat(P)-Di_mat_original(P));  ## works 
 
-
+#####################################################################
 # Equation 9, subtracting 1 to match the fortran code!!
 # So now this is really "how much time does it take to get there?"
 # rather than "when do you get there, if you start at time 1?".   
+######################################################################
 meantime <- function(P){
    D <- Di_mat(P)
   results <- matrix(0, nrow=dim(D[,,1])[1], ncol=dim(D[,,1])[2])
@@ -353,14 +362,17 @@ total_lifeSpan <- function(P){
 
 
 total_lifeSpan_SD <- function(P){
-  #Equation 7. Matches the output to the fortran code!  
+  #Equation 7. Matches the output of the fortran code!  
   MSD <- meantime_SD(P)
   LSD <- life_expectancy_SD(P)
   results <- matrix(0,nrow = nrow(P), ncol = ncol(P))
   for (i in 1:nrow(P)) {
       results[i,] <- LSD[i]^2 + MSD[i,]^2  
   }
-  return(sqrt(results)) 
+  results <- sqrt(results); 
+  CTL = total_lifeSpan(P); 
+  results[is.na(CTL)] = NA; # getting to target state is impossible
+  return(results) 
 }
 
 #########################################################
@@ -370,7 +382,7 @@ total_lifeSpan_SD <- function(P){
 # that are actually possible for newborns. 
 #########################################################
 
-### This is right and matches the fortran 
+### This is right, and the fortran is wrong, for >1 newborn type 
 lx <- function (P, newbornTypes=NULL, max=20) {
   # Equation 2
   if(is.null(newbornTypes)) newbornTypes=c(1:ncol(P));  
@@ -402,7 +414,7 @@ lx_pop_v2 <- function(A,B,P,max=20) {
 }    
 
 ## Equation 13, fx based on raw counts or newborn equivalents (if weighted==TRUE) 
-## This is right and matches the fortan. 
+## This is right, and the fortan is wrong, for >1 newborn type 
 fx = function(A,B,C,newbornTypes=NULL,max=20,weighted=FALSE) {
     if(is.null(newbornTypes)) newbornTypes=c(1:ncol(P)); 
     res = matrix(NA, max, ncol(P)); 
@@ -428,7 +440,7 @@ fx_pop = function(A,B,C,max=20,weighted=FALSE) {
 }
 
 
-##### R0 for each newborn type 
+##### R0(j) for each initial state j (can specify newborn types).  
 ### This is right and matches the fortran 
 net_rep <- function(B, C, weighted=FALSE,newbornTypes=NULL){
   # Equation 17
@@ -452,62 +464,50 @@ net_rep_pop <- function(A,B,C,weighted=FALSE){
  results
 }
 
-################ OK down to here 
-if(FALSE) {
-
-age <- function(A,B){
-  # scaling the reproductive value so sum v * bj = 1
-  #this becomes first value in the loop for Vx_V1
-  num <-  repro_value(A)
-  den <- sum(repro_value(A) * n_bj(A,B))
-  results <- (num/den) 
-  return(results)
-}
-
-Vx_V1 <- function(A,B,C,newbornType, MAX10 = 10){
-  #Equation 32
-  #for loop 
-  results <- NULL
-  v <- age(A,B)
-  for (x in 1:MAX10) {
-    results <- cbind(results,(colSums(v * C %^%(x-1))[newbornType])/ colSums(C %^% (x-1))[newbornType])
-    
-  }
-  results
-}
-
-
-Vx_V1_pop <- function(A,B,C,newbornType, MAX10 = 10){
-  # Table 2, Equation 33
-  #RESULTS DO NOT MATCH PAPER
-  res <- NULL
-  vx <- Vx_V1(A,B,C,newbornType,MAX10)
-  n <- n_bj(A,B)[newbornType]
-  for (x in 1:MAX10) {
-    res <- cbind(res, vx[,x] * n)
-  }
-  results <- colSums(res)
- results
-}
-
-
-average_age_production <- function(A,B,C,newbornType){
+### Mu_1 definition of generation time 
+average_age_production <- function(A,B,C,weighted=FALSE, newbornTypes=NULL){
   # Equation 27
+  if(is.null(newbornTypes)) newbornTypes=c(1:ncol(C)); 
+  if(weighted) wts = gam_i(A,B); 
+  if(!weighted) wts = bet_i(B); 
+ 
   Imat <- diag(dim(C)[1])
-  num <- sapply(newbornType, function(x) colSums(solve((Imat - C) %^% 2))  %*% colSums(Gammai(A,B)))
-  den <- net_rep(A,B,C,newbornType)
+  N = solve(Imat-C)
+  num = t(N%*%N)%*%wts; 
+  den <- net_rep(B,C,weighted=weighted)
   results <- num/den
-  results[newbornType]
+  results[newbornTypes]
 }
 
-average_age_production_SD <- function(A,B,C,newbornType){
+### Variance in age of offspring production 
+average_age_production_SD <- function(A,B,C,weighted=FALSE, newbornTypes=NULL){
   # Equation 28
+  if(is.null(newbornTypes)) newbornTypes=c(1:ncol(C)); 
+  if(weighted) wts = gam_i(A,B); 
+  if(!weighted) wts = bet_i(B); 
   Imat <- diag(dim(C)[1])
-  num <- sapply(newbornType, function(x) colSums((Imat + C) %*% (solve(Imat - C) %^% 3)) %*% colSums(Gammai(A,B)))
-  den <- net_rep(A,B,C,newbornType)
-  results <- sqrt((num/den) - ((average_age_production(A,B,C,newbornType)) ^ 2))
-  results[newbornType]
+  N = solve(Imat-C); 
+  U = (Imat + C)%*%N%*%N%*%N; 
+  num = t(U)%*%wts;   
+  den <- net_rep(B,C,weighted=weighted)
+  results2 = num/den - average_age_production(A,B,C,weighted=weighted)^2 
+  results = sqrt(results2); 
+  results[newbornTypes]
 }
+
+average_age_production_pop <- function(A,B,C,weighted=FALSE){
+  if(weighted) wts = gam_i(A,B); 
+  if(!weighted) wts = bet_i(B); 
+  Imat <- diag(dim(C)[1])
+  N = solve(Imat-C); 
+  num = t(N%*%N)%*%wts; 
+  b <- n_bj(A,B);
+  results = sum(num*b)/net_rep_pop(A,B,C,weighted=weighted) 
+  results
+}    
+    
+############ OK DOWN TO HERE, SPE Dec 2. 
+
 
 mean_age_residence <- function(C){
  # Equation 29
@@ -549,6 +549,45 @@ mean_age_residence_pop <- function(A,B,C){
 }
 
 
+################ OK down to here 
+
+
+age <- function(A,B){
+  # scaling the reproductive value so sum v * bj = 1
+  #this becomes first value in the loop for Vx_V1
+  num <-  repro_value(A)
+  den <- sum(repro_value(A) * n_bj(A,B))
+  results <- (num/den) 
+  return(results)
+}
+
+Vx_V1 <- function(A,B,C,newbornType, MAX10 = 10){
+  #Equation 32
+  #for loop 
+  results <- NULL
+  v <- age(A,B)
+  for (x in 1:MAX10) {
+    results <- cbind(results,(colSums(v * C %^%(x-1))[newbornType])/ colSums(C %^% (x-1))[newbornType])
+    
+  }
+  results
+}
+
+
+Vx_V1_pop <- function(A,B,C,newbornType, MAX10 = 10){
+  # Table 2, Equation 33
+  #RESULTS DO NOT MATCH PAPER
+  res <- NULL
+  vx <- Vx_V1(A,B,C,newbornType,MAX10)
+  n <- n_bj(A,B)[newbornType]
+  for (x in 1:MAX10) {
+    res <- cbind(res, vx[,x] * n)
+  }
+  results <- colSums(res)
+ results
+}
+
+ 
 mean_age_residence_pop_SD <- function(A,B,C){
   #Table 2
   #DOESN'T MATCH OUTPUT
@@ -617,6 +656,7 @@ generation_time <- function(A,B,C,newbornType){
   results
 }
 
+if(FALSE) {
 #########################################
 #Running program
 
@@ -694,44 +734,4 @@ age_first_reproduction_sd(Q)
 
 generation_time(A,B,C,c(1,3,4,5))
 
-} 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+}
