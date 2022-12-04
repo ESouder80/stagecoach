@@ -36,4 +36,4 @@ y = M[,1];
 fit2 = lm(y~X1+X2+X3+X4+X5+X6-1,data=Lx); 
 summary(fit2); 
 
-plot(coef(fit),coef(fit2); 
+plot(coef(fit),coef(fit2)); abline(0,1,lty=2); 
