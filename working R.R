@@ -298,6 +298,7 @@ Di_mat <- function(P){
 
 #####################################################################
 # Equation 9, subtracting 1 to match the fortran code!!
+# Mean time to get from one state to another. 
 # So now this is really "how much time does it take to get there?"
 # rather than "when do you get there, if you start at time 1?".   
 ######################################################################
@@ -320,6 +321,7 @@ meantime <- function(P){
 # Equation 10 ######################################
 # The output matches fortran stagecoach where SD is 
 # defined, and correctly gives NA otherwise. 
+####################################################
 meantime_SD <- function(P){
   D <- Di_mat(P)
   m0 <- meantime(P) ### this 'mean time' subtracts 1 to match the fortan 
@@ -505,9 +507,33 @@ average_age_production_pop <- function(A,B,C,weighted=FALSE){
   results = sum(num*b)/net_rep_pop(A,B,C,weighted=weighted) 
   results
 }    
-    
-############ OK DOWN TO HERE, SPE Dec 2. 
 
+############### OK down to here, SPE December 6. 
+
+Vx_V1 <- function(A,B,C,newbornType, MAX10 = 10){
+  #Equation 32
+  #for loop 
+  results <- NULL
+  v <- age(A,B)
+  for (x in 1:MAX10) {
+    results <- cbind(results,(colSums(v * C %^%(x-1))[newbornType])/ colSums(C %^% (x-1))[newbornType])
+    
+  }
+  results
+}
+
+Vx_V1_pop <- function(A,B,C,newbornType, MAX10 = 10){
+  # Table 2, Equation 33
+  #RESULTS DO NOT MATCH PAPER
+  res <- NULL
+  vx <- Vx_V1(A,B,C,newbornType,MAX10)
+  n <- n_bj(A,B)[newbornType]
+  for (x in 1:MAX10) {
+    res <- cbind(res, vx[,x] * n)
+  }
+  results <- colSums(res)
+ results
+}
 
 mean_age_residence <- function(C){
  # Equation 29
@@ -549,9 +575,6 @@ mean_age_residence_pop <- function(A,B,C){
 }
 
 
-################ OK down to here 
-
-
 age <- function(A,B){
   # scaling the reproductive value so sum v * bj = 1
   #this becomes first value in the loop for Vx_V1
@@ -561,33 +584,8 @@ age <- function(A,B){
   return(results)
 }
 
-Vx_V1 <- function(A,B,C,newbornType, MAX10 = 10){
-  #Equation 32
-  #for loop 
-  results <- NULL
-  v <- age(A,B)
-  for (x in 1:MAX10) {
-    results <- cbind(results,(colSums(v * C %^%(x-1))[newbornType])/ colSums(C %^% (x-1))[newbornType])
-    
-  }
-  results
-}
 
 
-Vx_V1_pop <- function(A,B,C,newbornType, MAX10 = 10){
-  # Table 2, Equation 33
-  #RESULTS DO NOT MATCH PAPER
-  res <- NULL
-  vx <- Vx_V1(A,B,C,newbornType,MAX10)
-  n <- n_bj(A,B)[newbornType]
-  for (x in 1:MAX10) {
-    res <- cbind(res, vx[,x] * n)
-  }
-  results <- colSums(res)
- results
-}
-
- 
 mean_age_residence_pop_SD <- function(A,B,C){
   #Table 2
   #DOESN'T MATCH OUTPUT
