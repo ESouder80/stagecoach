@@ -524,7 +524,6 @@ mean_age_residence_pop <- function(A,B,C){
   
 }
 
-
 mean_age_residence_pop_SD <- function(A,B,C){
   #Table 2
   #DOESN'T MATCH OUTPUT

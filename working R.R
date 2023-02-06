@@ -464,7 +464,7 @@ net_rep_pop <- function(A,B,C,weighted=FALSE){
  results
 }
 
-### Mu_1 definition of generation time 
+### Mu_1(j) definition of generation time, eqn. 27 
 average_age_production <- function(A,B,C,weighted=FALSE, newbornTypes=NULL){
   # Equation 27
   if(is.null(newbornTypes)) newbornTypes=c(1:ncol(C)); 
@@ -479,8 +479,8 @@ average_age_production <- function(A,B,C,weighted=FALSE, newbornTypes=NULL){
   results[newbornTypes]
 }
 
-### Variance in age of offspring production 
-average_age_production_SD <- function(A,B,C,weighted=FALSE, newbornTypes=NULL){
+### Variance in age of offspring production, SD(\theta(j))  
+age_production_SD <- function(A,B,C,weighted=FALSE, newbornTypes=NULL){
   # Equation 28
   if(is.null(newbornTypes)) newbornTypes=c(1:ncol(C)); 
   if(weighted) wts = gam_i(A,B); 
@@ -495,6 +495,7 @@ average_age_production_SD <- function(A,B,C,weighted=FALSE, newbornTypes=NULL){
   results[newbornTypes]
 }
 
+## \mu_1, Table 2 
 average_age_production_pop <- function(A,B,C,weighted=FALSE){
   if(weighted) wts = gam_i(A,B); 
   if(!weighted) wts = bet_i(B); 
@@ -506,9 +507,31 @@ average_age_production_pop <- function(A,B,C,weighted=FALSE){
   results
 }    
     
-############ OK DOWN TO HERE, SPE Dec 2. 
+  
+## Var[\theta(t)] Table 2 
+age_production_SD_pop <- function(A,B,C,weighted=FALSE){
+  if(weighted) wts = gam_i(A,B); 
+  if(!weighted) wts = bet_i(B); 
+  Imat <- diag(dim(C)[1])
+  N = solve(Imat-C); 
+  num = t(N%*%N%*%N%*%(Imat+C))%*%wts; 
+  b <- n_bj(A,B);
+  term1 = sum(num*b)/net_rep_pop(A,B,C,weighted=weighted)
+  term2 = average_age_production_pop(A,B,C,weighted=weighted)
+  results = sqrt(term1 - term2^2); 
+  results; 
+}        
+    
+generation_time <- function(A,B,C,weighted=FALSE){
+  lam <- pop_growth(A)
+  R <- net_rep_pop(A,B,C,weighted=weighted) 
+  results <- log(R)/log(lam)
+  results
+}
 
-
+################ OK down to here     
+        
+    
 mean_age_residence <- function(C){
  # Equation 29
  # Mean age of residence for each stage 
@@ -547,10 +570,6 @@ mean_age_residence_pop <- function(A,B,C){
   results
   
 }
-
-
-################ OK down to here 
-
 
 age <- function(A,B){
   # scaling the reproductive value so sum v * bj = 1

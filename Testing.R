@@ -71,12 +71,15 @@ total_lifeSpan_SD(P);   # These two match the fortran output lines 99-144
 # Fortran output Caswell.rst lines 246 to 260
 #############################################################
 net_rep(B,C); # matches fortran net reproductive rates R0(j), with the default weighted=FALSE 
-net_rep_pop(A,B,C); # matches population R0, line 258 of the fortran output 
 
-average_age_production(A,B,C,weighted=TRUE,newbornTypes=c(1,3,4,5));  # matches the fortran output for MU1 
-average_age_production_SD(A,B,C,weighted=TRUE,newbornTypes=c(1,3,4,5)); # matches the fortran output for SD 
+average_age_production(A,B,C,weighted=TRUE,newbornTypes=c(1,3,4,5));  # matches the fortran output for MU1(j) 
+age_production_SD(A,B,C,weighted=TRUE,newbornTypes=c(1,3,4,5)); # matches the fortran output for SD(j) 
 
 average_age_production_pop(A,B,C,weighted=TRUE); # matches population output for population MU1, line 259. 
+age_production_SD_pop(A,B,C,weighted=TRUE); #  matches STD DEV on line 259 
+
+generation_time(A,B,C,weighted=FALSE); # matches line 260 
+
 
 
 
