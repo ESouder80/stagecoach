@@ -30,18 +30,17 @@ pop_growth <- function(A) {
   #################################################################
   ##  Function to identify the population growth rate            ##
   ##  Argument/s:                                                ##
-  ##  A: transition matrix A                                     ##
+  ##  A: Transition matrix A                                     ##
   ##  Return Value/s:                                            ##
   ##  Population growth rate for matrix A                        ##
   ##  Author/s:                                                  ##
   ##  Erin Souder                                                ##
   ##  Date: 03/01/2023                                           ##
   #################################################################
-  
-  
+
    results <- Re(eigen(A)$values[1]) # need first real eigenvalue
+   if(!is.matrix(A)) {stop("This is not a matrix")}
    results
-  
 }
 
 stable_stage_dist <- function(A){
@@ -50,7 +49,7 @@ stable_stage_dist <- function(A){
   ##################################################################
   ##  Function to identify the stable stage distribution          ##
   ##  Argument/s:                                                 ##
-  ##  A: transition matrix A                                      ##
+  ##  A: Transition matrix A                                      ##
   ##  Return Value/s:                                             ##
   ##  Stable stage distribution                                   ##
   ##  Author/s:                                                   ##
@@ -58,11 +57,10 @@ stable_stage_dist <- function(A){
   ##  Date: 03/01/2023                                            ##
   ##################################################################
   
+  if(!is.matrix(A)) {stop("This is not a matrix")}
   allvectors <- eigen(A) 
   num <- allvectors$vectors[,1] # need the first column of eigenvectors
- 
   den <- sum(num) # sum of first column of eigenvectors
-  
   results <- Re(num/den) # num / den to give scaled eigenvector
   results
 }
@@ -73,7 +71,7 @@ reproductive_value <- function(A){
   #################################################################
   ##  Function to identify the reproductive value                ##
   ##  Argument/s:                                                ##
-  ##  A: tranition matrix A                                      ##
+  ##  A: Transition matrix A                                     ##
   ##  Return Value/s:                                            ##
   ##  Reproductive value                                         ##
   ##  Author/s:                                                  ##
@@ -81,12 +79,10 @@ reproductive_value <- function(A){
   ##  Date: 03/01/2023                                           ##
   #################################################################
   
-  
   num <- Re(eigen(t(A))$vectors[,1]) # transpose of matrix A
-  # Column one of eigenvectors
-  
+  if(!is.matrix(A)) {stop("This is not a matrix")}
+   # Column one of eigenvectors
   den <- sum(num)
-  
   results <- num/den
   results
 }
@@ -97,7 +93,7 @@ sensitivy_mat <- function(A){
   #################################################################
   ##  Function to determine sensitivty matrix                    ##
   ##  Argument/s:                                                ##
-  ##  transition matrix A                                        ##
+  ##  A: Transition matrix A                                     ##
   ##  Return Value/s:                                            ##
   ##  Sensitivity matrix                                         ##
   ##  Author/s:                                                  ##
@@ -105,26 +101,22 @@ sensitivy_mat <- function(A){
   ##  Date: 03/01/2023                                           ##
   #################################################################
   
- 
-  
+  if(!is.matrix(A)) {stop("This is not a matrix")}
   num <- reproductive_value(A) %*% t(stable_stage_dist(A)) 
   #reproductive value multiplied by transpose of stable stage distribution
   # matrix multiplication used
-  
   den <- as.numeric(reproductive_value(A) %*% stable_stage_dist(A))
- 
   results <- Re(num/den)
   results
 }
 
 
 elasticity_mat <- function(A){
- 
   
   #################################################################
   ##  Function to determine elasticity matrix                    ##
   ##  Argument/s:                                                ##
-  ##  A: transition matrix A                                     ##
+  ##  A: Transition matrix A                                     ##
   ##  Return Value/s:                                            ##
   ##  Elasticity matrix                                          ##
   ##  Author/s:                                                  ##
@@ -132,11 +124,9 @@ elasticity_mat <- function(A){
   ##  Date: 03/01/2023                                           ##
   #################################################################
   
-  
-  
+  if(!is.matrix(A)) {stop("This is not a matrix")}
   x <- 1/pop_growth(A) 
   y <- sensitivy_mat(A)
- 
   results <- (x * y) * A # sensitivity matrix multiplied by 1/growth rate
   Re(results)
 }
@@ -156,13 +146,13 @@ elasticity_mat <- function(A){
  
 
 n_bj <- function(A,B){
-  
+ 
   
   ######################################################################################
   ##  Function to determine stage frequency of newborns at stable stage distribution  ##
   ##  Equation 19                                                                     ##
   ##  Argument/s:                                                                     ##
-  ##  A: transition matrix A                                                          ##
+  ##  A: Transition matrix A                                                          ##
   ##  B: birth matrix B                                                               ##
   ##  Return Value/s:                                                                 ##
   ##  frequency of newborns at stable stage distribution for each newbornType         ##
@@ -171,11 +161,9 @@ n_bj <- function(A,B){
   ##  Date: 03/01/2023                                                                ##
   ######################################################################################
   
-  
   num <- B %*% stable_stage_dist(A) # need to use matrix multiplication
- 
+  if(!is.matrix(B)) {stop("This is not a matrix")}
   den <- sum(num)
- 
   results <-  num/den
   results
 }
@@ -183,12 +171,11 @@ n_bj <- function(A,B){
 
 age_in_stage <- function(A, B, C){
  
-  
   #################################################################
   ##  Function to identify the average age in stage i            ##
   ##  Equation 23                                                ##
   ##  Argument/s:                                                ##
-  ##  A: tansition matrix A                                      ##
+  ##  A: Transition matrix A                                     ##
   ##  B: Birth matrix B                                          ##
   ##  C: Survival matrix P plus fission matrix F                 ##
   ##  Return Value/s:                                            ##
@@ -198,13 +185,11 @@ age_in_stage <- function(A, B, C){
   ##  Date: 03/01/2023                                           ##
   #################################################################
   
- 
-  
   Imat <- diag(dim(A)[1]) # Identity matrix
   lambda <- pop_growth(A)
   bj <- n_bj(A,B)
   num <- rowSums(solve((Imat - (C/lambda)) %^% 2) %*% bj) 
- 
+  if(!is.matrix(C)) {stop("This is not a matrix")}
   den <- rowSums(solve(Imat - (C/lambda)) %*% bj)
  
   results <- num/den
@@ -219,9 +204,9 @@ age_in_stage_SD <- function(A, B, C){
   ##  Function to identify the standard deviation for the average age in stage i  ##
   ##  Equation 24                                                                 ##
   ##  Argument/s:                                                                 ##
-  ##  A: tansition matrix A                                                       ##
+  ##  A: Transition matrix A                                                      ##
   ##  B: Birth matrix B                                                           ##
-  ##  C: Survival plus fission matrix C                                           ##
+  ##  C: Survival matrix P + fission matrix C                                     ##
   ##  Return Value/s:                                                             ##
   ##  Standard deviation for the average age for each stage, i                    ##
   ##  Author/s:                                                                   ##
@@ -229,20 +214,15 @@ age_in_stage_SD <- function(A, B, C){
   ##  Date: 03/01/2023                                                            ##
   ##################################################################################
   
-  
   Imat <- diag(dim(A)[1]) # Identity matrix
   
   num <- rowSums(solve((Imat - 1/pop_growth(A) * C) %*% (Imat - 1/pop_growth(A) * C) %*% (Imat - 1/pop_growth(A) * C)) %*% (Imat + 1/pop_growth(A) * C) %*% n_bj(A,B))
- 
+  if(!is.matrix(C)) {stop("This is not a matrix")}
   den <- rowSums(solve(Imat - 1/pop_growth(A) * C) %*% n_bj(A,B))
   
   results <- sqrt((num/den) - (age_in_stage(A,B,C)) ^2)
   results
 }
-
-
-
-
 
 gam_i <- function(A,B){
 
@@ -251,7 +231,7 @@ gam_i <- function(A,B){
   ##  Function to determine the number of newborns generated by individuals in stage i  ##
   ##  Equation 12                                                                       ##
   ##  Argument/s:                                                                       ##
-  ##  A: tansition matrix A                                                             ##
+  ##  A: Transition matrix A                                                            ##
   ##  B: Birth matrix B                                                                 ##
   ##  Return Value/s:                                                                   ##
   ##  Number of newborns generated by individuals in stage i weighted                   ##
@@ -260,7 +240,6 @@ gam_i <- function(A,B){
   ##  Date: 03/01/2023                                                                  ##
   ########################################################################################
   
- 
  scaled_rep_value <- function(A){
     # Scaling the reproductive value so the first one is 1
     x <- reproductive_value(A)[1]
