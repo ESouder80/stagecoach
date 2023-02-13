@@ -9,6 +9,8 @@ library(readxl)
 
 library(Matrix)
 library(expm)
+library(bannerCommenter)
+
 
 
 A <- as.matrix(Caswell_P + Caswell_B + Fission)
@@ -16,133 +18,256 @@ B <- as.matrix(Caswell_B)
 C <- as.matrix(Caswell_P + Fission)
 P <- as.matrix(Caswell_P)
 
-##Stage Based Information##
+
+#################################################################
+##                   Stage Based Information                   ##
+#################################################################
 
 
 pop_growth <- function(A) {
-  # Population growth: Lambda
-  # Need to use the transition matrix A  
-  # This function gives the right eigenvalue of matrix A
-  results <- eigen(A)
-  Re(results$values[1])
+  
+  
+  #################################################################
+  ##  Function to identify the population growth rate            ##
+  ##  Argument/s:                                                ##
+  ##  A: transition matrix A                                     ##
+  ##  Return Value/s:                                            ##
+  ##  Population growth rate for matrix A                        ##
+  ##  Author/s:                                                  ##
+  ##  Erin Souder                                                ##
+  ##  Date: 03/01/2023                                           ##
+  #################################################################
+  
+  
+   results <- Re(eigen(A)$values[1]) # need first real eigenvalue
+   results
   
 }
 
-
-
 stable_stage_dist <- function(A){
-  # Stable stage distribution: "w"
-  # Need to use transition matrix A
-  # Scale so the first eigenvector number is 1
+  
+  
+  ##################################################################
+  ##  Function to identify the stable stage distribution          ##
+  ##  Argument/s:                                                 ##
+  ##  A: transition matrix A                                      ##
+  ##  Return Value/s:                                             ##
+  ##  Stable stage distribution                                   ##
+  ##  Author/s:                                                   ##
+  ##  Erin Souder                                                 ##
+  ##  Date: 03/01/2023                                            ##
+  ##################################################################
+  
   allvectors <- eigen(A) 
-  num <- allvectors$vectors[,1]
-  # Must specify column number 1
-  den <- sum(num)
-  # scale vectors to sum to 1. 
-  results <- num/den
-  Re(results) 
+  num <- allvectors$vectors[,1] # need the first column of eigenvectors
+ 
+  den <- sum(num) # sum of first column of eigenvectors
+  
+  results <- Re(num/den) # num / den to give scaled eigenvector
+  results
 }
 
-
 reproductive_value <- function(A){
-  # Transpose of matrix A gives left eigenvectors also known as reproductive value
-  num <- Re(eigen(t(A))$vectors[,1])
-  # Must specify colum number 1
+  
+  
+  #################################################################
+  ##  Function to identify the reproductive value                ##
+  ##  Argument/s:                                                ##
+  ##  A: tranition matrix A                                      ##
+  ##  Return Value/s:                                            ##
+  ##  Reproductive value                                         ##
+  ##  Author/s:                                                  ##
+  ##  Erin Souder                                                ##
+  ##  Date: 03/01/2023                                           ##
+  #################################################################
+  
+  
+  num <- Re(eigen(t(A))$vectors[,1]) # transpose of matrix A
+  # Column one of eigenvectors
+  
   den <- sum(num)
-  # scale vectors to sum to 1
+  
   results <- num/den
   results
 }
 
-
-
 sensitivy_mat <- function(A){
-  # Using both the eigenvectors found above, sensitivity matrix can be calulated
-  # transpose of stable stage distribution * reproduction vector
-  num <- reproductive_value(A) %*% t(stable_stage_dist(A))
-  # stable stage distribution * reproduction vector
+  
+  
+  #################################################################
+  ##  Function to determine sensitivty matrix                    ##
+  ##  Argument/s:                                                ##
+  ##  transition matrix A                                        ##
+  ##  Return Value/s:                                            ##
+  ##  Sensitivity matrix                                         ##
+  ##  Author/s:                                                  ##
+  ##  Erin Souder                                                ##
+  ##  Date: 03/01/2023                                           ##
+  #################################################################
+  
+ 
+  
+  num <- reproductive_value(A) %*% t(stable_stage_dist(A)) 
+  #reproductive value multiplied by transpose of stable stage distribution
+  # matrix multiplication used
+  
   den <- as.numeric(reproductive_value(A) %*% stable_stage_dist(A))
-  # divide top and bottom to get sensitivity matrix
-  results <- num/den
-  Re(results)
+ 
+  results <- Re(num/den)
+  results
 }
 
 
 elasticity_mat <- function(A){
-  # Dominant right eigenvalue and sensitivity matrix
+ 
   
-  x <- 1/pop_growth(A)
+  #################################################################
+  ##  Function to determine elasticity matrix                    ##
+  ##  Argument/s:                                                ##
+  ##  A: transition matrix A                                     ##
+  ##  Return Value/s:                                            ##
+  ##  Elasticity matrix                                          ##
+  ##  Author/s:                                                  ##
+  ##  Erin Souder                                                ##
+  ##  Date: 03/01/2023                                           ##
+  #################################################################
+  
+  
+  
+  x <- 1/pop_growth(A) 
   y <- sensitivy_mat(A)
-  # lambda /sensitivity matrix * A
-  results <- (x * y) * A
+ 
+  results <- (x * y) * A # sensitivity matrix multiplied by 1/growth rate
   Re(results)
 }
 
 
-###END OF STAGE BASED INFO###
 
-##AGE BASED INFO##
+##################################################################
+##                END OF STAGE BASED INFORMATION                ##
+##################################################################
 
+
+
+#################################################################
+##                BEGINNING OF AGE BASED INFORMATION           ##
+#################################################################
+
+ 
 
 n_bj <- function(A,B){
-  # Equation 19
-  # Stage frequency of newborns at stable stage
-  # using the stable stage vector that has been scaled to sum 1
-  # first multitply matrix B by the stable stage
-  num <- B %*% stable_stage_dist(A)
-  # sum matrix B by the stable stage vectors
-  den <- sum(B %*% stable_stage_dist(A))
-  # divide to get the values of bj. 
+  
+  
+  ######################################################################################
+  ##  Function to determine stage frequency of newborns at stable stage distribution  ##
+  ##  Equation 19                                                                     ##
+  ##  Argument/s:                                                                     ##
+  ##  A: transition matrix A                                                          ##
+  ##  B: birth matrix B                                                               ##
+  ##  Return Value/s:                                                                 ##
+  ##  frequency of newborns at stable stage distribution for each newbornType         ##
+  ##  Author/s:                                                                       ##
+  ##  Erin Souder                                                                     ##
+  ##  Date: 03/01/2023                                                                ##
+  ######################################################################################
+  
+  
+  num <- B %*% stable_stage_dist(A) # need to use matrix multiplication
+ 
+  den <- sum(num)
+ 
   results <-  num/den
   results
 }
 
 
-
 age_in_stage <- function(A, B, C){
-  # Equation 23
-  # Using matrix C which is P + F
-  # Identity matrix
-  # Need Pop_Growth, N_bj, identity matrix for this function
-  Imat <- diag(dim(A)[1])
+ 
+  
+  #################################################################
+  ##  Function to identify the average age in stage i            ##
+  ##  Equation 23                                                ##
+  ##  Argument/s:                                                ##
+  ##  A: tansition matrix A                                      ##
+  ##  B: Birth matrix B                                          ##
+  ##  C: Survival matrix P plus fission matrix F                 ##
+  ##  Return Value/s:                                            ##
+  ##  average age for each stage, i                              ##
+  ##  Author/s:                                                  ##
+  ##  Erin Souder                                                ##
+  ##  Date: 03/01/2023                                           ##
+  #################################################################
+  
+ 
+  
+  Imat <- diag(dim(A)[1]) # Identity matrix
   lambda <- pop_growth(A)
   bj <- n_bj(A,B)
-  num <- rowSums(solve((Imat - (C/lambda)) %^% 2) %*% bj)
-  # solve and multiply twice -> need inverse, squared 
-  # sum over the rows and multitply by stage frequency birth rate
+  num <- rowSums(solve((Imat - (C/lambda)) %^% 2) %*% bj) 
+ 
   den <- rowSums(solve(Imat - (C/lambda)) %*% bj)
-  # solve -> need inverse
+ 
   results <- num/den
   results
 }
 
 
 age_in_stage_SD <- function(A, B, C){
-  # Equation 24
-  # Standard deviation of mean age in stage
-  # need identity matrix
-  Imat <- diag(dim(A)[1])
-  # need to sum the rows of matrix C * 1/lambda multiply by 2,Solve for this to get the inverse of the matrices. 
-  # multiply by bj
+  
+  
+  ##################################################################################
+  ##  Function to identify the standard deviation for the average age in stage i  ##
+  ##  Equation 24                                                                 ##
+  ##  Argument/s:                                                                 ##
+  ##  A: tansition matrix A                                                       ##
+  ##  B: Birth matrix B                                                           ##
+  ##  C: Survival plus fission matrix C                                           ##
+  ##  Return Value/s:                                                             ##
+  ##  Standard deviation for the average age for each stage, i                    ##
+  ##  Author/s:                                                                   ##
+  ##  Erin Souder                                                                 ##
+  ##  Date: 03/01/2023                                                            ##
+  ##################################################################################
+  
+  
+  Imat <- diag(dim(A)[1]) # Identity matrix
+  
   num <- rowSums(solve((Imat - 1/pop_growth(A) * C) %*% (Imat - 1/pop_growth(A) * C) %*% (Imat - 1/pop_growth(A) * C)) %*% (Imat + 1/pop_growth(A) * C) %*% n_bj(A,B))
-  # Identity matrix minus the inverse of lambda * matrix C. Sum rows, Solve for this to get inverse. 
+ 
   den <- rowSums(solve(Imat - 1/pop_growth(A) * C) %*% n_bj(A,B))
-  # take square root to get standard deviation
-  # multiply by bj
+  
   results <- sqrt((num/den) - (age_in_stage(A,B,C)) ^2)
   results
 }
 
-scaled_rep_value <- function(A){
-  # Scaling the reproductive value so the first one is 1
-  x <- reproductive_value(A)[1]
-  results <- reproductive_value(A) / x
-  results
-}
+
+
 
 
 gam_i <- function(A,B){
-  # Equation 12
+
+  
+  ########################################################################################
+  ##  Function to determine the number of newborns generated by individuals in stage i  ##
+  ##  Equation 12                                                                       ##
+  ##  Argument/s:                                                                       ##
+  ##  A: tansition matrix A                                                             ##
+  ##  B: Birth matrix B                                                                 ##
+  ##  Return Value/s:                                                                   ##
+  ##  Number of newborns generated by individuals in stage i weighted                   ##
+  ##  Author/s:                                                                         ##
+  ##  Erin Souder                                                                       ##
+  ##  Date: 03/01/2023                                                                  ##
+  ########################################################################################
+  
+ 
+ scaled_rep_value <- function(A){
+    # Scaling the reproductive value so the first one is 1
+    x <- reproductive_value(A)[1]
+    results <- reproductive_value(A) / x
+    results
+  }
+  
   v <- scaled_rep_value(A)
   results <- t(B) %*% v
   results
@@ -150,16 +275,41 @@ gam_i <- function(A,B){
 
 
 bet_i <- function(B){
-  # Equation 11
-  # stage specific total fecundity in total offspring number
+  
+  
+  ##################################################################################
+  ##  Function to determine total number of offspring for individuals in stage i  ##
+  ##  Equation 11                                                                 ##
+  ##  Argument/s:                                                                 ##
+  ##  B: Birth matrix B                                                           ##
+  ##  Return Value/s:                                                             ##
+  ##  Average total number of offspring for individuals in stage i unweighted     ##
+  ##  Author/s:                                                                   ##
+  ##  Erin Souder                                                                 ##
+  ##  Date: 03/01/2023                                                            ##
+  ##################################################################################
+ 
   results <- colSums(B);  
   return(results)
 }
 
 pop_gen_time <- function(A, B, C){
-  # Equation 26
-  # sum the total of mean ages, stable stage vectors, and gamma multiplied 
-  # and divide by the sum of stable stage vectors and gamma in order to produce 
+
+  
+  ##########################################################################
+  ##  Function to identify mean age of parents when they first reproduce  ##
+  ##  Equation 26                                                         ##
+  ##  Argument/s:                                                         ##
+  ##  A: Transition matrix A                                              ##
+  ##  B: Birth matrix B                                                   ##
+  ##  C: Survival matrix P + Fission matrix F                             ##
+  ##  Return Value/s:                                                     ##
+  ##  Average age of parents produced in current time frame               ##
+  ##  Author/s:                                                           ##
+  ##  Erin Souder                                                         ##
+  ##  Date: 03/01/2023                                                    ##
+  ##########################################################################
+  
   num <- sum(age_in_stage(A,B,C) * stable_stage_dist(A) * gam_i(A,B)) 
   den <- sum(stable_stage_dist(A) * gam_i(A,B))
   results <- num/den
@@ -168,8 +318,26 @@ pop_gen_time <- function(A, B, C){
 
 
 pit <- function(A,B,C, maxAge = 10){
-  # Equation 22
-  p <- pop_growth(A)
+
+  #################################################################
+  ##  Function to determine fraction of newborns in stage i      ##
+  ##  Equation 22                                                ##
+  ##  Argument/s:                                                ##
+  ##  A: Transition matrix A                                     ##
+  ##  B: Birth matrix B                                          ##
+  ##  C: Survival matrix P + Fission matrix F                    ##
+  ##  maxAge: number of years to use default 10                  ##
+  ##  Return Value/s:                                            ##
+  ##  Fraction of newborns in stage class i                      ##
+  ##  Author/s:                                                  ##
+  ##  Dr. Stephen Ellner                                         ##
+  ##  Dr. Simone Blomberg                                        ##
+  ##  Erin Souder                                                ##
+  ##  Date: 03/01/2023                                           ##
+  #################################################################
+  
+  
+   p <- pop_growth(A)
   #lambda
   b <- n_bj(A,B)
   Imat <- diag(x = 1, dim(C))
@@ -193,7 +361,25 @@ pit <- function(A,B,C, maxAge = 10){
 }
 
 stable_age_distribution <- function(A,B,C, maxAge = 10){
-  # Equation 31
+  
+  
+  #################################################################
+  ##  Function to determine stable age distribution              ##
+  ##  Equation 31                                                ##
+  ##  Argument/s:                                                ##
+  ##  A: Transition matrix A                                     ##
+  ##  B: Birth matrix B                                          ##
+  ##  C: Survival matrix P + Fission matrix F                    ##
+  ##  maxAge: number of years to use default 10                  ##
+  ##  Return Value/s:                                            ##
+  ##  Stable age distribution                                    ##
+  ##  Author/s:                                                  ##
+  ##  Dr. Stephen Ellner                                         ##
+  ##  Dr. Simone Blomberg                                        ##
+  ##  Erin Souder                                                ##
+  ##  Date: 03/01/2023                                           ##
+  #################################################################
+  
   pp <- pit(A,B,C,maxAge)
   w <- stable_stage_dist(A)
  
@@ -204,35 +390,73 @@ stable_age_distribution <- function(A,B,C, maxAge = 10){
 }
 
 
-life_expectancy <- function(C){
-  # Equation 3
-  # Must use identity matrix the same size as your C or P matrix.
-  # Must use P matrix *if* there is fission in your C matrix
-  Imat <- diag(dim(C)[1]) 
-  # take the inverse of I-c in order to determine life expectancy
-  results <- colSums(solve(Imat - C))
+life_expectancy <- function(P){
+  
+  
+  ##################################################################
+  ##  Function to determine life expectancy for each stage        ##
+  ##  Equation 3                                                  ##
+  ##  Argument/s:                                                 ##
+  ##  P: Survival matrix P                                        ##
+  ##  OR                                                          ##
+  ##  C: Survival matrix P + Fission matrix F                     ##
+  ##  Return Value/s:                                             ##
+  ##  Life expectancy for each stage                              ##
+  ##  Author/s:                                                   ##
+  ##  Erin Souder                                                 ##
+  ##  Date: 03/01/2023                                            ##
+  ##################################################################
+  
+  Imat <- diag(dim(P)[1]) # Identity matrix
+  
+  results <- colSums(solve(Imat - P)) # take the inverse of I-c in order to determine life expectancy
   results
 }
 
 
-
-life_expectancy_SD <- function(C){
-  # Equation 5
-  # Must use identity matrix the same size as your C or P matrix
-  # Must use P matrix if there is fission in your C matrix
-  Imat <- diag(dim(C)[1])
+life_expectancy_SD <- function(P){
+  
+  
+  #######################################################################################
+  ##  Function to determine the standard deviation for life expectancy for each stage  ##
+  ##  Equation 5                                                                       ##
+  ##  Argument/s:                                                                      ##
+  ##  P: Survival matrix P                                                             ##
+  ##  OR                                                                               ##
+  ##  C: Survial matrix P + Fission matrix F                                           ##
+  ##  Return Value/s:                                                                  ##
+  ##  Standard deviation for the life expectancy for each stage                        ##
+  ##  Author/s:                                                                        ##
+  ##  Erin Souder                                                                      ##
+  ##  Date: 03/01/2023                                                                 ##
+  #######################################################################################
+  
+  Imat <- diag(dim(P)[1]) # Identity matrix
   #take the inverse and mulitply it through twice and multiply by the sum of (I + C)
-  y <- colSums((Imat + C) %*% (solve(Imat - C) %^% 2))
+  y <- colSums((Imat + P) %*% (solve(Imat - P) %^% 2))
   #take the squareroot of (this answer minus life expectancy squared) for the SD
-  results <- sqrt(y - (life_expectancy(C))^2) 
+  results <- sqrt(y - (life_expectancy(P))^2) 
   results
 }
 
 
 
 Di_mat <- function(P){
-  # Equation 8
-  # Make new matrices for meantime
+  
+  
+  ########################################################################
+  ##  Function to identify new transition matrix for each stage i       ##
+  ##  Equation 8                                                        ##
+  ##  Argument/s:                                                       ##
+  ##  P: Survival matrix P                                              ##
+  ##  Return Value/s:                                                   ##
+  ##  Transition matrix for each stage of individuals entering stage i  ##
+  ##  Author/s:                                                         ##
+  ##  Dr. Stephen Ellner                                                ##
+  ##  Erin Souder                                                       ##
+  ##  Date: 03/01/2023                                                  ##
+  ########################################################################
+  
   results <- array(0, dim = c(dim(P),ncol(P)))
   for (i  in 1:ncol(P)) {
     results[,,i] = P; 
@@ -243,7 +467,21 @@ Di_mat <- function(P){
  
 
 meantime <- function(P){
-  #Equation 9
+  
+  
+  ############################################################################
+  ##  Function to determine the average time to reach stage i from stage j  ##
+  ##  Equation 9                                                            ##
+  ##  Argument/s:                                                           ##
+  ##  P: Survival matrix P                                                  ##
+  ##  Return Value/s:                                                       ##
+  ##  The average time to reach stage i from stage j                        ##
+  ##  Author/s:                                                             ##
+  ##  Dr. Stephen Ellner                                                    ##
+  ##  Dr. Simone Blomberg                                                   ##
+  ##  Erin Souder                                                           ##
+  ##  Date: 03/01/2023                                                      ##
+  ############################################################################
   
   D <- Di_mat(P)
   results <- matrix(0, nrow= nrow(P), ncol= ncol(P))
@@ -264,7 +502,22 @@ meantime <- function(P){
 }
 
 meantime_SD <- function(P){
-  #Equation 10
+  
+  
+  ######################################################################################
+  ##  Function to determine the SD of the average time to reach stage i from stage j  ##
+  ##  Equation 10                                                                     ##
+  ##  Argument/s:                                                                     ##
+  ##  P: Survival matrix P                                                            ##
+  ##  Return Value/s:                                                                 ##
+  ##  The standard deviation for the average time to reach stage i from stage j       ##
+  ##  Author/s:                                                                       ##
+  ##  Dr. Stephen Ellner                                                              ##
+  ##  Dr. Simone Blomberg                                                             ##
+  ##  Erin Souder                                                                     ##
+  ##  Date: 03/01/2023                                                                ##
+  ######################################################################################
+  
   #OUTPUT DOESN'T MATCH STAGECOACH
   D <- Di_mat(P)
   m0 <- meantime(P)
@@ -288,8 +541,22 @@ meantime_SD <- function(P){
 }
 
 total_lifeSpan <- function(P){
- #Equation 6
-
+  
+  
+  #########################################################################
+  ##  Function to determine total conditional lifespan for each stage i  ##
+  ##  Equation 6                                                         ##
+  ##  Argument/s:                                                        ##
+  ##  P: Survival matrix P                                               ##
+  ##  Return Value/s:                                                    ##
+  ##  The total lifespan for each stage i                                ##
+  ##  Author/s:                                                          ##
+  ##  Dr. Stephen Ellner                                                 ##
+  ##  Dr. Simone Blomberg                                                ##
+  ##  Erin Souder                                                        ##
+  ##  Date: 03/01/2023                                                   ##
+  #########################################################################
+  
  LE <- life_expectancy(P)
  # must add each stage number to the correct vector
  MT <- meantime(P)
@@ -312,7 +579,21 @@ total_lifeSpan <- function(P){
 
 
 total_lifeSpan_SD <- function(P){
-  #Equation 7
+  
+  
+  ###################################################################################
+  ##  Function to determine the SD of total conditional lifespan for each stage i  ##
+  ##  Equation 7                                                                   ##
+  ##  Argument/s:                                                                  ##
+  ##  P: Survival matrix P                                                         ##
+  ##  Return Value/s:                                                              ##
+  ##  The standard deviation of total lifespan for each stage i                    ##
+  ##  Author/s:                                                                    ##
+  ##  Dr. Stephen Ellner                                                           ##
+  ##  Dr. Simone Blomberg                                                          ##
+  ##  Erin Souder                                                                  ##
+  ##  Date: 03/01/2023                                                             ##
+  ###################################################################################
   
   m <- meantime_SD(P)
   l <- life_expectancy_SD(P)
@@ -328,8 +609,24 @@ total_lifeSpan_SD <- function(P){
 
 
 lx <- function (P, newbornTypes = NULL, max = 20) {
-  # Equation 2
-  # newbornTypes if limiting to stages where newborns are possible
+  
+  
+  ##########################################################################################
+  ##  Function to determine the probability of survival to age x for type j-newborn (lx)  ##
+  ##  Equation 2                                                                          ##
+  ##  Argument/s:                                                                         ##
+  ##  P: Survival matrix P                                                                ##
+  ##  newbornTypes: type j newborn default NULL                                           ##
+  ##  max: max number of repitions through equation default 20                            ##
+  ##  Return Value/s:                                                                     ##
+  ##  The probability of survival to age x for j type newborn                             ##
+  ##  Author/s:                                                                           ##
+  ##  Dr. Stephen Ellner                                                                  ##
+  ##  Dr. Simone Blomberg                                                                 ##
+  ##  Erin Souder                                                                         ##
+  ##  Date: 03/01/2023                                                                    ##
+  ##########################################################################################
+  
   if(is.null(newbornTypes)) newbornTypes = c(1:ncol(P));
   
   results <- matrix(1,max,ncol(P))
@@ -345,7 +642,24 @@ lx <- function (P, newbornTypes = NULL, max = 20) {
 
 
 lx_pop <- function (A,B, P, max = 20) {
-  # Table 2
+
+  
+  ##################################################################################
+  ##  Function to determine the population survival probability (lx pop)          ##
+  ##  Table 2                                                                     ##
+  ##  Argument/s:                                                                 ##
+  ##  A: Transition matrix                                                        ##
+  ##  P: Survival matrix P                                                        ##
+  ##  B: Birth matrix                                                             ##
+  ##  max: max number of times to run through equation default 20                 ##
+  ##  Return Value/s:                                                             ##
+  ##  The probability of survival to age x for j type newborn for the population  ##
+  ##  Author/s:                                                                   ##
+  ##  Dr. Stephen Ellner                                                          ##
+  ##  Dr. Simone Blomberg                                                         ##
+  ##  Erin Souder                                                                 ##
+  ##  Date: 03/01/2023                                                            ##
+  ##################################################################################
   
   l <- lx(P,max = max)
   b <- n_bj(A,B)
@@ -356,8 +670,26 @@ lx_pop <- function (A,B, P, max = 20) {
 
 
 fx_weighted <- function(A,B,C, newbornTypes = NULL, max= 20 ){
-  # Equation 13
-  # based on "newborn equivalents"
+  
+  
+  #################################################################################
+  ##  Function to determine weighted reproduction at age x (fx weighted)          ##
+  ##  Equation 13                                                                ##
+  ##  Argument/s:                                                                ##
+  ##  A: Transition matrix                                                       ##
+  ##  C: Survival matrix P + Fission matrix F                                    ##
+  ##  B: Birth matrix                                                            ##
+  ##  newbornType: type j newborn default NULL                                   ##
+  ##  max: max number of times to run through equation default 20                ##
+  ##  Return Value/s:                                                            ##
+  ##  The weighted average number of offspring produced by individuals at age x  ##
+  ##  Author/s:                                                                  ##
+  ##  Dr. Stephen Ellner                                                         ##
+  ##  Dr. Simone Blomberg                                                        ##
+  ##  Erin Souder                                                                ##
+  ##  Date: 03/01/2023                                                           ##
+  #################################################################################
+  
   if(is.null(newbornTypes)) newbornTypes = c(1:ncol(P));
   
   results <- matrix(NA, max, ncol(P));
@@ -376,8 +708,26 @@ fx_weighted <- function(A,B,C, newbornTypes = NULL, max= 20 ){
 }
 
 fx_unweighted <- function(A,B,C,newbornTypes = NULL, max = 20){
-  # Equation 13 
-  # based on raw numbers of offspring
+  
+  
+  ###################################################################################
+  ##  Function to determine unweighted reproduction at age x (fx unweighted)       ##
+  ##  Equation 13                                                                  ##
+  ##  Argument/s:                                                                  ##
+  ##  A: Transition matrix                                                         ##
+  ##  C: Survival matrix P + Fission matrix F                                      ##
+  ##  B: Birth matrix                                                              ##
+  ##  newbornType: type j newborn default NULL                                     ##
+  ##  max: max number of times to run through equation default 20                  ##
+  ##  Return Value/s:                                                              ##
+  ##  The unweighted average number of offspring produced by individuals at age x  ##
+  ##  Author/s:                                                                    ##
+  ##  Dr. Stephen Ellner                                                           ##
+  ##  Dr. Simone Blomberg                                                          ##
+  ##  Erin Souder                                                                  ##
+  ##  Date: 03/01/2023                                                             ##
+  ###################################################################################
+  
   if(is.null(newbornTypes)) newbornTypes = c(1:ncol(P));
   # newbornTypes if only want stages that can reproduce
   
@@ -395,8 +745,25 @@ fx_unweighted <- function(A,B,C,newbornTypes = NULL, max = 20){
 }
 
 fx_pop_weighted <- function(A,B,C, max = 20){
-  # Table 2
-  # Based on "newborn equivalents"
+  
+  
+  #################################################################################
+  ##  Function to determine population reproduction at time t (fx weighted pop)  ##
+  ##  Table 2                                                                    ##
+  ##  Argument/s:                                                                ##
+  ##  A: Transition matrix                                                       ##
+  ##  C: Survival matrix P + Fission matrix F                                    ##
+  ##  B: Birth matrix                                                            ##
+  ##  max: max number of times to run through equation default 20                ##
+  ##  Return Value/s:                                                            ##
+  ##  The weighted population reproduction at time t                             ##
+  ##  Author/s:                                                                  ##
+  ##  Dr. Stephen Ellner                                                         ##
+  ##  Dr. Simone Blomberg                                                        ##
+  ##  Erin Souder                                                                ##
+  ##  Date: 03/01/2023                                                           ##
+  #################################################################################
+  
   f <- fx_weighted(A,B,C)
   b <- n_bj(A,B)
  results <- f %*% b
@@ -404,30 +771,69 @@ fx_pop_weighted <- function(A,B,C, max = 20){
 }
 
 fx_pop_unweighted <- function(A,B,C, max = 20){
-  # Table 2
-  # Based on raw numbers
+  
+  
+  ##############################################################################################
+  ##  Function to determine unweighted population reproduction at time t (fx unweighted pop)  ##
+  ##  Table 2                                                                                 ##
+  ##  Argument/s:                                                                             ##
+  ##  A: Transition matrix                                                                    ##
+  ##  C: Survival matrix P + Fission matrix F                                                 ##
+  ##  B: Birth matrix                                                                         ##
+  ##  max: max number of times to run through equation default 20                             ##
+  ##  Return Value/s:                                                                         ##
+  ##  The unweighted population reproduction at time t                                        ##
+  ##  Author/s:                                                                               ##
+  ##  Dr. Stephen Ellner                                                                      ##
+  ##  Dr. Simone Blomberg                                                                     ##
+  ##  Erin Souder                                                                             ##
+  ##  Date: 03/01/2023                                                                        ##
+  ##############################################################################################
+  
   f <-fx_unweighted(A,B,C)
   b <- n_bj(A,B)
   results <- f %*% b
   return(results)
 }
 
-age <- function(A,B){
-  # scaling the reproductive value so sum v * bj = 1
-  #this becomes first value in the loop for Vx_V1
-  num <-  repro_value(A)
-  den <- sum(repro_value(A) * n_bj(A,B))
-  results <- (num/den) 
-  return(results)
-}
 
 
-Vx_V1 <- function(A,B,C,newbornType, MAX10 = 10){
-  #Equation 32
-  #for loop 
+
+Vx_V1 <- function(A,B,C,newbornType = NULL, max = 20){
+  
+  
+  #########################################################################
+  ##  Function to determine the age specific reproductive value (Vx/V1)  ##
+  ##  Equation 32                                                        ##
+  ##  Argument/s:                                                        ##
+  ##  A: Transition matrix                                               ##
+  ##  C: Survival matrix P + Fission matrix F                            ##
+  ##  B: Birth matrix                                                    ##
+  ##  newbornType: type j newborn default NULL                           ##
+  ##  max: max number of times to run through equation default 20        ##
+  ##  Return Value/s:                                                    ##
+  ##  The  age specific reproductive value for each stage                ##
+  ##  Author/s:                                                          ##
+  ##  Dr. Simone Blomberg                                                ##
+  ##  Erin Souder                                                        ##
+  ##  Date: 03/01/2023                                                   ##
+  #########################################################################
+  
+  
+  age <- function(A,B){
+    # scaling the reproductive value so sum v * bj = 1
+    #this becomes first value in the loop for Vx_V1
+    num <-  repro_value(A)
+    den <- sum(repro_value(A) * n_bj(A,B))
+    results <- (num/den) 
+    return(results)
+  }
+  
+  
+  if(is.null(newbornTypes)) newbornTypes = c(1:ncol(P));
   results <- NULL
   v <- age(A,B)
-  for (x in 1:MAX10) {
+  for (x in 1:max) {
     results <- cbind(results,(colSums(v * C %^%(x-1))[newbornType])/ colSums(C %^% (x-1))[newbornType])
     
   }
@@ -435,13 +841,32 @@ Vx_V1 <- function(A,B,C,newbornType, MAX10 = 10){
 }
 
 
-Vx_V1_pop <- function(A,B,C,newbornType, MAX10 = 10){
-  # Table 2, Equation 33
-  #RESULTS DO NOT MATCH PAPER
+Vx_V1_pop <- function(A,B,C,newbornType = NULL, max = 20){
+  
+  
+  ############################################################################################
+  ##  Function to determine the age specific reproductive value for population (Vx/V1 pop)  ##
+  ##  Equation 33                                                                           ##
+  ##  Argument/s:                                                                           ##
+  ##  A: Transition matrix                                                                  ##
+  ##  C: Survival matrix P + Fission matrix F                                               ##
+  ##  B: Birth matrix                                                                       ##
+  ##  newbornType: type j newborn default NULL                                              ##
+  ##  max: max number of times to run through equation default 20                           ##
+  ##  Return Value/s:                                                                       ##
+  ##  The average age specific reproductive value for the population                        ##
+  ##  Author/s:                                                                             ##
+  ##  Dr. Simone Blomberg                                                                   ##
+  ##  Erin Souder                                                                           ##
+  ##  Date: 03/01/2023                                                                      ##
+  ############################################################################################
+  
+  if(is.null(newbornTypes)) newbornTypes = c(1:ncol(P));
+ 
   res <- NULL
-  vx <- Vx_V1(A,B,C,newbornType,MAX10)
+  vx <- Vx_V1(A,B,C,newbornType,max)
   n <- n_bj(A,B)[newbornType]
-  for (x in 1:MAX10) {
+  for (x in 1:max) {
     res <- cbind(res, vx[,x] * n)
   }
   results <- colSums(res)
@@ -451,8 +876,23 @@ Vx_V1_pop <- function(A,B,C,newbornType, MAX10 = 10){
 
 
 net_rep <- function(B, C, newbornType){
-  # Equation 17
-  Imat <- diag(dim(C)[1])
+  
+  
+  #######################################################################
+  ##  Function to identify the net reproductive rate (R0)              ##
+  ##  Equation 17                                                      ##
+  ##  Argument/s:                                                      ##
+  ##  C: Survival matrix P + Fission matrix F                          ##
+  ##  B: Birth matrix                                                  ##
+  ##  newbornType: type j newborn                                      ##
+  ##  Return Value/s:                                                  ##
+  ##  The average number of offspring during an individual's lifetime  ##
+  ##  Author/s:                                                        ##
+  ##  Erin Souder                                                      ##
+  ##  Date: 03/01/2023                                                 ##
+  #######################################################################
+  
+  Imat <- diag(dim(C)[1]) # Identity matrix
   y <- g(B)
   results <- colSums(solve(Imat - C) * y)[newbornType]
   results
@@ -460,7 +900,23 @@ net_rep <- function(B, C, newbornType){
 
 
 net_rep_pop <- function(A,B,C,newbornType){
-  #Table 2
+  
+  
+  ##########################################################################################
+  ##  Function to identify the net reproductive rate for the population (R0 pop)          ##
+  ##  Table 2                                                                             ##
+  ##  Argument/s:                                                                         ##
+  ##  A: Transition matrix A                                                              ##
+  ##  C: Survival matrix P + Fission matrix F                                             ##
+  ##  B: Birth matrix                                                                     ##
+  ##  newbornType: type j newborn                                                         ##
+  ##  Return Value/s:                                                                     ##
+  ##  The average number of offspring during an individual's lifetime for the population  ##
+  ##  Author/s:                                                                           ##
+  ##  Erin Souder                                                                         ##
+  ##  Date: 03/01/2023                                                                    ##
+  ##########################################################################################
+  
   R <- net_rep(B,C,newbornType)
   b <- n_bj(A,B)[newbornType]
   results <- sum(R * b)
@@ -468,8 +924,25 @@ net_rep_pop <- function(A,B,C,newbornType){
 }
 
 average_age_production <- function(A,B,C,newbornType){
-  # Equation 27
-  Imat <- diag(dim(C)[1])
+  
+  
+  ###################################################################
+  ##  Function to determine the average age of first reproduction  ##
+  ##  Equation 27                                                  ##
+  ##  Argument/s:                                                  ##
+  ##  A: Transition matrix A                                       ##
+  ##  C: Survival matrix P + Fission matrix F                      ##
+  ##  B: Birth matrix                                              ##
+  ##  newbornType: type j newborn                                  ##
+  ##  Return Value/s:                                              ##
+  ##  The average age of first reproduction for each stage j       ##
+  ##  Author/s:                                                    ##
+  ##  Dr. Simone Blomberg                                          ##
+  ##  Erin Souder                                                  ##
+  ##  Date: 03/01/2023                                             ##
+  ###################################################################
+  
+  Imat <- diag(dim(C)[1]) #Identity matrix
   num <- sapply(newbornType, function(x) colSums(solve((Imat - C) %^% 2))  %*% colSums(Gammai(A,B)))
   den <- net_rep(A,B,C,newbornType)
   results <- num/den
@@ -477,8 +950,25 @@ average_age_production <- function(A,B,C,newbornType){
 }
 
 average_age_production_SD <- function(A,B,C,newbornType){
-  # Equation 28
-  Imat <- diag(dim(C)[1])
+  
+  
+  #############################################################################################
+  ##  Function to determine the standard deviation of the average age at first reproduction  ##
+  ##  Equation 28                                                                            ##
+  ##  Argument/s:                                                                            ##
+  ##  A: Transition matrix A                                                                 ##
+  ##  C: Survival matrix P + Fission matrix F                                                ##
+  ##  B: Birth matrix                                                                        ##
+  ##  newbornType: type j newborn                                                            ##
+  ##  Return Value/s:                                                                        ##
+  ##  The standard deviation of the average age of first reproduction for each stage j       ##
+  ##  Author/s:                                                                              ##
+  ##  Dr. Simone Blomberg                                                                    ##
+  ##  Erin Souder                                                                            ##
+  ##  Date: 03/01/2023                                                                       ##
+  #############################################################################################
+  
+  Imat <- diag(dim(C)[1]) #Identity matrix
   num <- sapply(newbornType, function(x) colSums((Imat + C) %*% (solve(Imat - C) %^% 3)) %*% colSums(Gammai(A,B)))
   den <- net_rep(A,B,C,newbornType)
   results <- sqrt((num/den) - ((average_age_production(A,B,C,newbornType)) ^ 2))
@@ -486,10 +976,25 @@ average_age_production_SD <- function(A,B,C,newbornType){
 }
 
 mean_age_residence <- function(C){
- # Equation 29
- # Mean age of residence for each stage 
+  
+  
+  #################################################################
+  ##  Function to determine the average age of stage j (Si)      ##
+  ##  Equation 29                                                ##
+  ##  Argument/s:                                                ##
+  ##  C: Survival matrix P + Fission matrix F                    ##
+  ##  newbornType: type j newborn                                ##
+  ##  Return Value/s:                                            ##
+  ##  The average age of stage j                                 ##
+  ##  Author/s:                                                  ##
+  ##  Dr. Stephen Ellner                                         ##
+  ##  Dr. Simone Blomberg                                        ##
+  ##  Erin Souder                                                ##
+  ##  Date: 03/01/2023                                           ##
+  #################################################################
+
  #Need to do by newbornType and make NaN = 0
-Imat <- diag(dim(C)[1])
+Imat <- diag(dim(C)[1]) #Identity matrix
 # Identity matrix
 num <- solve((Imat - C) %^% 2)
 den <- solve(Imat - C)
@@ -499,12 +1004,28 @@ results
 }
 
 mean_age_residence_SD <- function(C){
-  # Equation 30
+  
+  
+  #######################################################################################
+  ##  Function to determine the standard deviation of the average age of stage j (Si)  ##
+  ##  Equation 30                                                                      ##
+  ##  Argument/s:                                                                      ##
+  ##  C: Survival matrix P + Fission matrix F                                          ##
+  ##  newbornType: type j newborn                                                      ##
+  ##  Return Value/s:                                                                  ##
+  ##  The standard deviation of the average age of stage j                             ##
+  ##  Author/s:                                                                        ##
+  ##  Dr. Simone Blomberg                                                              ##
+  ##  Erin Souder                                                                      ##
+  ##  Date: 03/01/2023                                                                 ##
+  #######################################################################################
+  
+ 
   #Need to fix this so it just gives the newbornTypes 1,3,4,5
   
   S <- mean_age_residence(C,newbornType)
-  Imat <- diag(dim(C)[1])
-  # identity matrix
+  Imat <- diag(dim(C)[1])  # identity matrix
+ 
   num <- (Imat + C) %*% solve((Imat - C) %^% 3)
   den <- solve(Imat - C)
   results <- abs(sqrt((num / den) - S ^ 2))
@@ -514,9 +1035,25 @@ mean_age_residence_SD <- function(C){
 }
 
 mean_age_residence_pop <- function(A,B,C){
-  #Table 2
+  
+  
+  ############################################################################
+  ##  Function to determine the population average age of stage j (Si pop)  ##
+  ##  Table 2                                                               ##
+  ##  Argument/s:                                                           ##
+  ##  A: Transition matrix A                                                ##
+  ##  B: Birth matrix B                                                     ##
+  ##  C: Survival matrix P + Fission matrix F                               ##
+  ##  Return Value/s:                                                       ##
+  ##  The population average age of stage j                                 ##
+  ##  Author/s:                                                             ##
+  ##  Dr. Simone Blomberg                                                   ##
+  ##  Erin Souder                                                           ##
+  ##  Date: 03/01/2023                                                      ##
+  ############################################################################
+  
   bj <- n_bj(A,B)
-  Imat <- diag(dim(C)[1])
+  Imat <- diag(dim(C)[1]) # Identity matrix
   num <- solve((Imat - C) %^% 2) %*% bj
   den <- solve(Imat - C) %*% bj
   results <- num/den
@@ -524,12 +1061,29 @@ mean_age_residence_pop <- function(A,B,C){
   
 }
 
+
 mean_age_residence_pop_SD <- function(A,B,C){
-  #Table 2
+  
+  
+  ######################################################################################
+  ##  Function to determine the population SD of the average age of stage j (Si pop)  ##
+  ##  Table 2                                                                         ##
+  ##  Argument/s:                                                                     ##
+  ##  A: Transition matrix A                                                          ##
+  ##  B: Birth matrix B                                                               ##
+  ##  C: Survival matrix P + Fission matrix F                                         ##
+  ##  Return Value/s:                                                                 ##
+  ##  The population standard deviation of the average age of stage j                 ##
+  ##  Author/s:                                                                       ##
+  ##  Dr. Simone Blomberg                                                             ##
+  ##  Erin Souder                                                                     ##
+  ##  Date: 03/01/2023                                                                ##
+  ######################################################################################
+  
   #DOESN'T MATCH OUTPUT
   s <- mean_age_residence_pop(A,B,C)
   b <- n_bj(A,B)
-  Imat <- diag(x = 1, dim(C))
+  Imat <- diag(x = 1, dim(C)) # Identity matrix
   # identity matrix
   num <- ((Imat + C) %*% solve(Imat - C) %^% 3) %*% b
   den <- (solve(Imat - C)) %*% b
@@ -539,9 +1093,23 @@ mean_age_residence_pop_SD <- function(A,B,C){
 
 
 Q_mat <- function(P,stage){
- # Equation 14
- # New tranistion matrix called Q.
- # Use the stage where birth occurs. For Caswell, it is only column 6
+  
+  
+  ###################################################################
+  ##  Function to identify new transition matrix for reproduction  ##
+  ##  Equation 14                                                  ##
+  ##  Argument/s:                                                  ##
+  ##  P: Survival matrix P                                         ##
+  ##  stage: stage at which reproduction occurs (j)                ##
+  ##  Return Value/s:                                              ##
+  ##  Transition martrix                                           ##
+  ##  Author/s:                                                    ##
+  ##  Dr. Simone Blomberg                                          ##
+  ##  Erin Souder                                                  ##
+  ##  Date: 03/01/2023                                             ##
+  ###################################################################
+  
+
   results <- matrix(0, nrow = nrow(P), ncol = ncol(P))
   for (i in 1:dim(P)[1]) {
     for (j in  1: dim(P)[2]){
@@ -559,10 +1127,26 @@ Q_mat <- function(P,stage){
 
 
 maturity_age <- function(P,Q_mat,stage,newbornType){
-  # Equation 15
-  # Use the transition matrix from above
+  
+  
+  #################################################################
+  ##  Function to determine average age of maturity (E)          ##
+  ##  Equation 15                                                ##
+  ##  Argument/s:                                                ##
+  ##  P: Survival matrix P                                       ##
+  ##  Q_mat: Equation 14                                         ##
+  ##  stage: stage at which reproduction occurs                  ##
+  ##  newbornType: newborn type j                                ##
+  ##  Return Value/s:                                            ##
+  ##  Average age of maturity at each stage j                    ##
+  ##  Author/s:                                                  ##
+  ##  Dr. Simone Blomberg                                        ##
+  ##  Erin Souder                                                ##
+  ##  Date: 03/01/2023                                           ##
+  #################################################################
+  
   q <- Q_mat(P,stage)
-  Imat <- diag(x = 1, dim(P))
+  Imat <- diag(x = 1, dim(P)) # Identity matrix
   # identity matrix
   num <- (solve((Imat - q) %*% (Imat - q)))
   den <- (solve(Imat - q))
@@ -573,11 +1157,28 @@ maturity_age <- function(P,Q_mat,stage,newbornType){
 
 
 maturity_age_SD <- function(P,Q_mat,stage,newbornType){
-# Equation 16
+  
+  
+  ###################################################################################
+  ##  Function to determine standard deviation of the average age of maturity (E)  ##
+  ##  Equation 16                                                                  ##
+  ##  Argument/s:                                                                  ##
+  ##  P: Survival matrix P                                                         ##
+  ##  Q_mat: Equation 14                                                           ##
+  ##  stage: stage at which reproduction occurs                                    ##
+  ##  newbornType: newborn type j                                                  ##
+  ##  Return Value/s:                                                              ##
+  ##  Standard deviation of the average age of maturity at each stage j            ##
+  ##  Author/s:                                                                    ##
+  ##  Dr. Simone Blomberg                                                          ##
+  ##  Erin Souder                                                                  ##
+  ##  Date: 03/01/2023                                                             ##
+  ###################################################################################
+
   #DOESN'T MATCH OUTPUT
  q <- Q_mat(P,stage)
  m <- maturity_age(P,Q_mat,stage,newbornType)
- Imat <- diag(dim(P)[1])
+ Imat <- diag(dim(P)[1]) # Identity matrix
   num <- (Imat + q) %*% (solve((Imat - q) %*% (Imat - q) %*% (Imat - q)))
   den <- solve(Imat - q)
    results <- sqrt(abs(num/den) - m^2)
@@ -586,6 +1187,22 @@ maturity_age_SD <- function(P,Q_mat,stage,newbornType){
 
 
 generation_time <- function(A,B,C,newbornType){
+  
+  
+  #################################################################
+  ##  Function to determine generation time                      ##
+  ##  Argument/s:                                                ##
+  ##  A: Transition matrix A                                     ##
+  ##  B: Birth matrix B                                          ##
+  ##  C: Survival matrix P + Fission matrix F                    ##
+  ##  newbornType: newborn type j                                ##
+  ##  Return Value/s:                                            ##
+  ##  Generation time for each stage j                           ##
+  ##  Author/s:                                                  ##
+  ##  Erin Souder                                                ##
+  ##  Date: 03/01/2023                                           ##
+  #################################################################
+  
   lam <- pop_growth(A)
   R <- sum(net_rep_pop(A,B,C,newbornType))
   results <- log(R) / log(lam)
