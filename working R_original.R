@@ -8,6 +8,7 @@ Fission <- read_excel("C:/Users/Erin/Desktop/Caswell_F.xlsx")
 library(readxl)
 
 library(Matrix)
+library(matrixcalc)
 library(expm)
 library(bannerCommenter)
 
@@ -38,8 +39,10 @@ pop_growth <- function(A) {
   ##  Date: 03/01/2023                                           ##
   #################################################################
 
+  if(!is.matrix(A)) {stop("This is not a matrix")}
+  if(!is.square.matrix(A)) {stop("This is not a square matrix")}
+  
    results <- Re(eigen(A)$values[1]) # need first real eigenvalue
-   if(!is.matrix(A)) {stop("This is not a matrix")}
    results
 }
 
@@ -58,6 +61,8 @@ stable_stage_dist <- function(A){
   ##################################################################
   
   if(!is.matrix(A)) {stop("This is not a matrix")}
+  if(!is.square.matrix(A)) {stop("This is not a square matrix")}
+  
   allvectors <- eigen(A) 
   num <- allvectors$vectors[,1] # need the first column of eigenvectors
   den <- sum(num) # sum of first column of eigenvectors
@@ -79,8 +84,10 @@ reproductive_value <- function(A){
   ##  Date: 03/01/2023                                           ##
   #################################################################
   
-  num <- Re(eigen(t(A))$vectors[,1]) # transpose of matrix A
   if(!is.matrix(A)) {stop("This is not a matrix")}
+  if(!is.square.matrix(A)) {stop("This is not a square matrix")}
+  
+  num <- Re(eigen(t(A))$vectors[,1]) # transpose of matrix A
    # Column one of eigenvectors
   den <- sum(num)
   results <- num/den
@@ -102,6 +109,8 @@ sensitivy_mat <- function(A){
   #################################################################
   
   if(!is.matrix(A)) {stop("This is not a matrix")}
+  if(!is.square.matrix(A)) {stop("This is not a square matrix")}
+  
   num <- reproductive_value(A) %*% t(stable_stage_dist(A)) 
   #reproductive value multiplied by transpose of stable stage distribution
   # matrix multiplication used
@@ -125,6 +134,8 @@ elasticity_mat <- function(A){
   #################################################################
   
   if(!is.matrix(A)) {stop("This is not a matrix")}
+  if(!is.square.matrix(A)) {stop("This is not a square matrix")}
+  
   x <- 1/pop_growth(A) 
   y <- sensitivy_mat(A)
   results <- (x * y) * A # sensitivity matrix multiplied by 1/growth rate
@@ -161,8 +172,10 @@ n_bj <- function(A,B){
   ##  Date: 03/01/2023                                                                ##
   ######################################################################################
   
-  num <- B %*% stable_stage_dist(A) # need to use matrix multiplication
   if(!is.matrix(B)) {stop("This is not a matrix")}
+  if(!is.square.matrix(B)) {stop("This is not a square matrix")}
+  
+  num <- B %*% stable_stage_dist(A) # need to use matrix multiplication
   den <- sum(num)
   results <-  num/den
   results
@@ -185,11 +198,17 @@ age_in_stage <- function(A, B, C){
   ##  Date: 03/01/2023                                           ##
   #################################################################
   
+  if(!is.matrix(A)) {stop("This is not a matrix")}
+  if(!is.matrix(B)) {stop("This is not a matrix")}
+  if(!is.matrix(C)) {stop("This is not a matrix")}
+  if(!is.square.matrix(A)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(B)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(C)) {stop("This is not a square matrix")}
+  
   Imat <- diag(dim(A)[1]) # Identity matrix
   lambda <- pop_growth(A)
   bj <- n_bj(A,B)
   num <- rowSums(solve((Imat - (C/lambda)) %^% 2) %*% bj) 
-  if(!is.matrix(C)) {stop("This is not a matrix")}
   den <- rowSums(solve(Imat - (C/lambda)) %*% bj)
  
   results <- num/den
@@ -214,10 +233,15 @@ age_in_stage_SD <- function(A, B, C){
   ##  Date: 03/01/2023                                                            ##
   ##################################################################################
   
-  Imat <- diag(dim(A)[1]) # Identity matrix
-  
-  num <- rowSums(solve((Imat - 1/pop_growth(A) * C) %*% (Imat - 1/pop_growth(A) * C) %*% (Imat - 1/pop_growth(A) * C)) %*% (Imat + 1/pop_growth(A) * C) %*% n_bj(A,B))
+  if(!is.matrix(A)) {stop("This is not a matrix")}
+  if(!is.matrix(B)) {stop("This is not a matrix")}
   if(!is.matrix(C)) {stop("This is not a matrix")}
+  if(!is.square.matrix(A)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(B)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(C)) {stop("This is not a square matrix")}
+  
+  Imat <- diag(dim(A)[1]) # Identity matrix
+  num <- rowSums(solve((Imat - 1/pop_growth(A) * C) %*% (Imat - 1/pop_growth(A) * C) %*% (Imat - 1/pop_growth(A) * C)) %*% (Imat + 1/pop_growth(A) * C) %*% n_bj(A,B))
   den <- rowSums(solve(Imat - 1/pop_growth(A) * C) %*% n_bj(A,B))
   
   results <- sqrt((num/den) - (age_in_stage(A,B,C)) ^2)
@@ -240,7 +264,12 @@ gam_i <- function(A,B){
   ##  Date: 03/01/2023                                                                  ##
   ########################################################################################
   
- scaled_rep_value <- function(A){
+  if(!is.matrix(A)) {stop("This is not a matrix")}
+  if(!is.matrix(B)) {stop("This is not a matrix")}
+  if(!is.square.matrix(A)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(B)) {stop("This is not a square matrix")}
+  
+   scaled_rep_value <- function(A){
     # Scaling the reproductive value so the first one is 1
     x <- reproductive_value(A)[1]
     results <- reproductive_value(A) / x
@@ -268,7 +297,10 @@ bet_i <- function(B){
   ##  Date: 03/01/2023                                                            ##
   ##################################################################################
  
-  results <- colSums(B);  
+  if(!is.matrix(B)) {stop("This is not a matrix")}
+  if(!is.square.matrix(B)) {stop("This is not a square matrix")}
+  
+   results <- colSums(B);  
   return(results)
 }
 
@@ -288,6 +320,13 @@ pop_gen_time <- function(A, B, C){
   ##  Erin Souder                                                         ##
   ##  Date: 03/01/2023                                                    ##
   ##########################################################################
+  
+  if(!is.matrix(A)) {stop("This is not a matrix")}
+  if(!is.matrix(B)) {stop("This is not a matrix")}
+  if(!is.matrix(C)) {stop("This is not a matrix")} 
+  if(!is.square.matrix(A)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(B)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(C)) {stop("This is not a square matrix")}
   
   num <- sum(age_in_stage(A,B,C) * stable_stage_dist(A) * gam_i(A,B)) 
   den <- sum(stable_stage_dist(A) * gam_i(A,B))
@@ -315,7 +354,13 @@ pit <- function(A,B,C, maxAge = 10){
   ##  Date: 03/01/2023                                           ##
   #################################################################
   
-  
+  if(!is.matrix(A)) {stop("This is not a matrix")}
+  if(!is.matrix(B)) {stop("This is not a matrix")}
+  if(!is.matrix(C)) {stop("This is not a matrix")}
+  if(!is.square.matrix(A)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(B)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(C)) {stop("This is not a square matrix")}
+
    p <- pop_growth(A)
   #lambda
   b <- n_bj(A,B)
@@ -359,6 +404,13 @@ stable_age_distribution <- function(A,B,C, maxAge = 10){
   ##  Date: 03/01/2023                                           ##
   #################################################################
   
+  if(!is.matrix(A)) {stop("This is not a matrix")}
+  if(!is.matrix(B)) {stop("This is not a matrix")}
+  if(!is.matrix(C)) {stop("This is not a matrix")}
+  if(!is.square.matrix(A)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(B)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(C)) {stop("This is not a square matrix")}
+  
   pp <- pit(A,B,C,maxAge)
   w <- stable_stage_dist(A)
  
@@ -386,6 +438,9 @@ life_expectancy <- function(P){
   ##  Date: 03/01/2023                                            ##
   ##################################################################
   
+  if(!is.matrix(P)) {stop("This is not a matrix")}
+  if(!is.square.matrix(P)) {stop("This is not a square matrix")}
+  
   Imat <- diag(dim(P)[1]) # Identity matrix
   
   results <- colSums(solve(Imat - P)) # take the inverse of I-c in order to determine life expectancy
@@ -409,6 +464,9 @@ life_expectancy_SD <- function(P){
   ##  Erin Souder                                                                      ##
   ##  Date: 03/01/2023                                                                 ##
   #######################################################################################
+  
+  if(!is.matrix(P)) {stop("This is not a matrix")}
+  if(!is.square.matrix(P)) {stop("This is not a square matrix")}
   
   Imat <- diag(dim(P)[1]) # Identity matrix
   #take the inverse and mulitply it through twice and multiply by the sum of (I + C)
@@ -436,6 +494,9 @@ Di_mat <- function(P){
   ##  Date: 03/01/2023                                                  ##
   ########################################################################
   
+  if(!is.matrix(P)) {stop("This is not a matrix")}
+  if(!is.square.matrix(P)) {stop("This is not a square matrix")}
+  
   results <- array(0, dim = c(dim(P),ncol(P)))
   for (i  in 1:ncol(P)) {
     results[,,i] = P; 
@@ -461,6 +522,9 @@ meantime <- function(P){
   ##  Erin Souder                                                           ##
   ##  Date: 03/01/2023                                                      ##
   ############################################################################
+  
+  if(!is.matrix(P)) {stop("This is not a matrix")}
+  if(!is.square.matrix(P)) {stop("This is not a square matrix")}
   
   D <- Di_mat(P)
   results <- matrix(0, nrow= nrow(P), ncol= ncol(P))
@@ -497,7 +561,10 @@ meantime_SD <- function(P){
   ##  Date: 03/01/2023                                                                ##
   ######################################################################################
   
-  #OUTPUT DOESN'T MATCH STAGECOACH
+  if(!is.matrix(P)) {stop("This is not a matrix")} 
+  if(!is.square.matrix(P)) {stop("This is not a square matrix")}
+  
+   #OUTPUT DOESN'T MATCH STAGECOACH
   D <- Di_mat(P)
   m0 <- meantime(P)
   m1 <- m0 + 1
@@ -536,7 +603,10 @@ total_lifeSpan <- function(P){
   ##  Date: 03/01/2023                                                   ##
   #########################################################################
   
- LE <- life_expectancy(P)
+  if(!is.matrix(P)) {stop("This is not a matrix")}
+  if(!is.square.matrix(P)) {stop("This is not a square matrix")}
+  
+  LE <- life_expectancy(P)
  # must add each stage number to the correct vector
  MT <- meantime(P)
  results <- matrix(0,nrow = nrow(P),ncol = ncol(P))
@@ -574,6 +644,9 @@ total_lifeSpan_SD <- function(P){
   ##  Date: 03/01/2023                                                             ##
   ###################################################################################
   
+  if(!is.matrix(P)) {stop("This is not a matrix")}
+  if(!is.square.matrix(P)) {stop("This is not a square matrix")}
+  
   m <- meantime_SD(P)
   l <- life_expectancy_SD(P)
   results <- matrix(0,nrow = nrow(P), ncol = ncol(P))
@@ -606,6 +679,8 @@ lx <- function (P, newbornTypes = NULL, max = 20) {
   ##  Date: 03/01/2023                                                                    ##
   ##########################################################################################
   
+  if(!is.matrix(P)) {stop("This is not a matrix")}
+  if(!is.square.matrix(P)) {stop("This is not a square matrix")}
   if(is.null(newbornTypes)) newbornTypes = c(1:ncol(P));
   
   results <- matrix(1,max,ncol(P))
@@ -640,6 +715,13 @@ lx_pop <- function (A,B, P, max = 20) {
   ##  Date: 03/01/2023                                                            ##
   ##################################################################################
   
+  if(!is.matrix(A)) {stop("This is not a matrix")}
+  if(!is.matrix(B)) {stop("This is not a matrix")}
+  if(!is.matrix(P)) {stop("This is not a matrix")}
+  if(!is.square.matrix(A)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(B)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(P)) {stop("This is not a square matrix")}
+  
   l <- lx(P,max = max)
   b <- n_bj(A,B)
   results = l %*% b;
@@ -669,6 +751,12 @@ fx_weighted <- function(A,B,C, newbornTypes = NULL, max= 20 ){
   ##  Date: 03/01/2023                                                           ##
   #################################################################################
   
+  if(!is.matrix(A)) {stop("This is not a matrix")}
+  if(!is.matrix(B)) {stop("This is not a matrix")}
+  if(!is.matrix(C)) {stop("This is not a matrix")}
+  if(!is.square.matrix(A)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(B)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(C)) {stop("This is not a square matrix")}
   if(is.null(newbornTypes)) newbornTypes = c(1:ncol(P));
   
   results <- matrix(NA, max, ncol(P));
@@ -707,7 +795,13 @@ fx_unweighted <- function(A,B,C,newbornTypes = NULL, max = 20){
   ##  Date: 03/01/2023                                                             ##
   ###################################################################################
   
-  if(is.null(newbornTypes)) newbornTypes = c(1:ncol(P));
+  if(!is.matrix(A)) {stop("This is not a matrix")}
+  if(!is.matrix(B)) {stop("This is not a matrix")}
+  if(!is.matrix(C)) {stop("This is not a matrix")}
+  if(!is.square.matrix(A)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(B)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(C)) {stop("This is not a square matrix")}
+   if(is.null(newbornTypes)) newbornTypes = c(1:ncol(P));
   # newbornTypes if only want stages that can reproduce
   
   results <- matrix(NA, max, ncol(P));
@@ -743,7 +837,14 @@ fx_pop_weighted <- function(A,B,C, max = 20){
   ##  Date: 03/01/2023                                                           ##
   #################################################################################
   
-  f <- fx_weighted(A,B,C)
+  if(!is.matrix(A)) {stop("This is not a matrix")}
+  if(!is.matrix(B)) {stop("This is not a matrix")}
+  if(!is.matrix(C)) {stop("This is not a matrix")}
+  if(!is.square.matrix(A)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(B)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(C)) {stop("This is not a square matrix")}
+  
+   f <- fx_weighted(A,B,C)
   b <- n_bj(A,B)
  results <- f %*% b
  return(results)
@@ -768,6 +869,13 @@ fx_pop_unweighted <- function(A,B,C, max = 20){
   ##  Erin Souder                                                                             ##
   ##  Date: 03/01/2023                                                                        ##
   ##############################################################################################
+  
+  if(!is.matrix(A)) {stop("This is not a matrix")}
+  if(!is.matrix(B)) {stop("This is not a matrix")}
+  if(!is.matrix(C)) {stop("This is not a matrix")}
+  if(!is.square.matrix(A)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(B)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(C)) {stop("This is not a square matrix")}
   
   f <-fx_unweighted(A,B,C)
   b <- n_bj(A,B)
@@ -799,6 +907,14 @@ Vx_V1 <- function(A,B,C,newbornType = NULL, max = 20){
   #########################################################################
   
   
+  if(!is.matrix(A)) {stop("This is not a matrix")}
+  if(!is.matrix(B)) {stop("This is not a matrix")}
+  if(!is.matrix(C)) {stop("This is not a matrix")}
+  if(!is.square.matrix(A)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(B)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(C)) {stop("This is not a square matrix")}
+  if(is.null(newbornTypes)) newbornTypes = c(1:ncol(C));
+  
   age <- function(A,B){
     # scaling the reproductive value so sum v * bj = 1
     #this becomes first value in the loop for Vx_V1
@@ -809,7 +925,7 @@ Vx_V1 <- function(A,B,C,newbornType = NULL, max = 20){
   }
   
   
-  if(is.null(newbornTypes)) newbornTypes = c(1:ncol(P));
+  
   results <- NULL
   v <- age(A,B)
   for (x in 1:max) {
@@ -820,7 +936,7 @@ Vx_V1 <- function(A,B,C,newbornType = NULL, max = 20){
 }
 
 
-Vx_V1_pop <- function(A,B,C,newbornType = NULL, max = 20){
+Vx_V1_pop <- function(A,B,C, max = 20){
   
   
   ############################################################################################
@@ -840,7 +956,13 @@ Vx_V1_pop <- function(A,B,C,newbornType = NULL, max = 20){
   ##  Date: 03/01/2023                                                                      ##
   ############################################################################################
   
-  if(is.null(newbornTypes)) newbornTypes = c(1:ncol(P));
+  if(!is.matrix(A)) {stop("This is not a matrix")}
+  if(!is.matrix(B)) {stop("This is not a matrix")}
+  if(!is.matrix(C)) {stop("This is not a matrix")}
+  if(!is.square.matrix(A)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(B)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(C)) {stop("This is not a square matrix")}
+  #if(is.null(newbornTypes)) newbornTypes = c(1:ncol(C));
  
   res <- NULL
   vx <- Vx_V1(A,B,C,newbornType,max)
@@ -871,6 +993,11 @@ net_rep <- function(B, C, newbornType){
   ##  Date: 03/01/2023                                                 ##
   #######################################################################
   
+  if(!is.matrix(B)) {stop("This is not a matrix")}
+  if(!is.matrix(C)) {stop("This is not a matrix")}
+  if(!is.square.matrix(B)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(C)) {stop("This is not a square matrix")}
+  
   Imat <- diag(dim(C)[1]) # Identity matrix
   y <- g(B)
   results <- colSums(solve(Imat - C) * y)[newbornType]
@@ -896,6 +1023,13 @@ net_rep_pop <- function(A,B,C,newbornType){
   ##  Date: 03/01/2023                                                                    ##
   ##########################################################################################
   
+  if(!is.matrix(A)) {stop("This is not a matrix")}
+  if(!is.matrix(B)) {stop("This is not a matrix")}
+  if(!is.matrix(C)) {stop("This is not a matrix")}
+  if(!is.square.matrix(A)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(B)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(C)) {stop("This is not a square matrix")}
+  
   R <- net_rep(B,C,newbornType)
   b <- n_bj(A,B)[newbornType]
   results <- sum(R * b)
@@ -920,6 +1054,13 @@ average_age_production <- function(A,B,C,newbornType){
   ##  Erin Souder                                                  ##
   ##  Date: 03/01/2023                                             ##
   ###################################################################
+  
+  if(!is.matrix(A)) {stop("This is not a matrix")}
+  if(!is.matrix(B)) {stop("This is not a matrix")}
+  if(!is.matrix(C)) {stop("This is not a matrix")}
+  if(!is.square.matrix(A)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(B)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(C)) {stop("This is not a square matrix")}
   
   Imat <- diag(dim(C)[1]) #Identity matrix
   num <- sapply(newbornType, function(x) colSums(solve((Imat - C) %^% 2))  %*% colSums(Gammai(A,B)))
@@ -947,6 +1088,13 @@ average_age_production_SD <- function(A,B,C,newbornType){
   ##  Date: 03/01/2023                                                                       ##
   #############################################################################################
   
+  if(!is.matrix(A)) {stop("This is not a matrix")}
+  if(!is.matrix(B)) {stop("This is not a matrix")}
+  if(!is.matrix(C)) {stop("This is not a matrix")}
+  if(!is.square.matrix(A)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(B)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(C)) {stop("This is not a square matrix")}
+  
   Imat <- diag(dim(C)[1]) #Identity matrix
   num <- sapply(newbornType, function(x) colSums((Imat + C) %*% (solve(Imat - C) %^% 3)) %*% colSums(Gammai(A,B)))
   den <- net_rep(A,B,C,newbornType)
@@ -972,7 +1120,10 @@ mean_age_residence <- function(C){
   ##  Date: 03/01/2023                                           ##
   #################################################################
 
- #Need to do by newbornType and make NaN = 0
+  if(!is.matrix(C)) {stop("This is not a matrix")}
+  if(!is.square.matrix(C)) {stop("This is not a square matrix")}
+  
+#Need to do by newbornType and make NaN = 0
 Imat <- diag(dim(C)[1]) #Identity matrix
 # Identity matrix
 num <- solve((Imat - C) %^% 2)
@@ -1000,7 +1151,9 @@ mean_age_residence_SD <- function(C){
   #######################################################################################
   
  
-  #Need to fix this so it just gives the newbornTypes 1,3,4,5
+  if(!is.matrix(C)) {stop("This is not a matrix")}
+  if(!is.square.matrix(C)) {stop("This is not a square matrix")}
+   #Need to fix this so it just gives the newbornTypes 1,3,4,5
   
   S <- mean_age_residence(C,newbornType)
   Imat <- diag(dim(C)[1])  # identity matrix
@@ -1031,6 +1184,13 @@ mean_age_residence_pop <- function(A,B,C){
   ##  Date: 03/01/2023                                                      ##
   ############################################################################
   
+  if(!is.matrix(A)) {stop("This is not a matrix")}
+  if(!is.matrix(B)) {stop("This is not a matrix")}
+  if(!is.matrix(C)) {stop("This is not a matrix")}
+  if(!is.square.matrix(A)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(B)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(C)) {stop("This is not a square matrix")}
+  
   bj <- n_bj(A,B)
   Imat <- diag(dim(C)[1]) # Identity matrix
   num <- solve((Imat - C) %^% 2) %*% bj
@@ -1058,6 +1218,13 @@ mean_age_residence_pop_SD <- function(A,B,C){
   ##  Erin Souder                                                                     ##
   ##  Date: 03/01/2023                                                                ##
   ######################################################################################
+  
+  if(!is.matrix(A)) {stop("This is not a matrix")}
+  if(!is.matrix(B)) {stop("This is not a matrix")}
+  if(!is.matrix(C)) {stop("This is not a matrix")}
+  if(!is.square.matrix(A)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(B)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(C)) {stop("This is not a square matrix")}
   
   #DOESN'T MATCH OUTPUT
   s <- mean_age_residence_pop(A,B,C)
@@ -1088,7 +1255,9 @@ Q_mat <- function(P,stage){
   ##  Date: 03/01/2023                                             ##
   ###################################################################
   
-
+  if(!is.matrix(P)) {stop("This is not a matrix")}
+  if(!is.square.matrix(P)) {stop("This is not a square matrix")}
+  
   results <- matrix(0, nrow = nrow(P), ncol = ncol(P))
   for (i in 1:dim(P)[1]) {
     for (j in  1: dim(P)[2]){
@@ -1124,6 +1293,9 @@ maturity_age <- function(P,Q_mat,stage,newbornType){
   ##  Date: 03/01/2023                                           ##
   #################################################################
   
+  if(!is.matrix(P)) {stop("This is not a matrix")}
+  if(!is.square.matrix(P)) {stop("This is not a square matrix")}
+  
   q <- Q_mat(P,stage)
   Imat <- diag(x = 1, dim(P)) # Identity matrix
   # identity matrix
@@ -1154,6 +1326,9 @@ maturity_age_SD <- function(P,Q_mat,stage,newbornType){
   ##  Date: 03/01/2023                                                             ##
   ###################################################################################
 
+  if(!is.matrix(P)) {stop("This is not a matrix")}
+  if(!is.square.matrix(P)) {stop("This is not a square matrix")}
+  
   #DOESN'T MATCH OUTPUT
  q <- Q_mat(P,stage)
  m <- maturity_age(P,Q_mat,stage,newbornType)
@@ -1182,6 +1357,13 @@ generation_time <- function(A,B,C,newbornType){
   ##  Date: 03/01/2023                                           ##
   #################################################################
   
+  if(!is.matrix(A)) {stop("This is not a matrix")}
+  if(!is.matrix(B)) {stop("This is not a matrix")}
+  if(!is.matrix(C)) {stop("This is not a matrix")}
+  if(!is.square.matrix(A)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(B)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(C)) {stop("This is not a square matrix")}
+  
   lam <- pop_growth(A)
   R <- sum(net_rep_pop(A,B,C,newbornType))
   results <- log(R) / log(lam)
@@ -1192,120 +1374,86 @@ generation_time <- function(A,B,C,newbornType){
 
 
 
-#########################################
-#Running program
+#################################################################
+##                       RUNNING PROGRAM                       ##
+#################################################################
 
-Pop_Growth(A)
+pop_growth(A)
 
-Stable_Stage(A)
+stable_stage_dist(A)
 
-Rep_Value(A)
+reproductive_value(A)
 
-Sens_Mat(A)
+sensitivy_mat(A)
 
-Elas_Mat(A)
+elasticity_mat(A)
 
-N_bj(A,B)
+n_bj(A,B)
 
-Age_in_stage(A,B,C)
+age_in_stage(A,B,C)
 
-Age_in_stage_sd(A,B,C)
+age_in_stage_SD(A,B,C)
 
-scaled(A)
+gam_i(A,B)
 
-g(B)
+bet_i(B)
 
-Gammai(A,B)
+pop_gen_time(A,B,C)
 
-Age_of_parents(A,B,C)
+pit(A,B,C, maxAge = 10)
 
-#
+stable_age_distribution(A,B,C, maxAge = 10)
 
-#
+life_expectancy(P)
 
-Life_expectancy(P)
-
-Life_expectancy_sd(P)
+life_expectancy_SD(P)
 
 Di_mat(P)
 
-Expected_years(Di)
+meantime(P)
 
-#
+meantime_SD(P)
 
-#
+total_lifeSpan(P)
 
-lx(P,c(1,3,4,5))
+total_lifeSpan_SD(P)
 
-poplx(A,B,P,c(1,3,4,5))
+lx(P,newbornTypes = NULL, max = 20)
 
-fx(C,c(1,3,4,5))
+lx_pop(A,B,P, max = 20)
 
-fx_pop(A,B,C,c(1,3,4,5))
+fx_weighted(A,B,C,newbornTypes = NULL, max = 20)
 
-Vx_V1(A,B,C,c(1,3,4,5))
+fx_unweighted(A,B,C,newbornTypes = NULL, max = 20)
 
-Vx_V1_pop(A,B,C,c(1,3,4,5))
+fx_pop_weighted(A,B,C, max = 20)
 
-net_rep(A,B,C)
+fx_pop_unweighted(A,B,C, max = 20)
 
-net_rep_pop(A,B,C,c(1,3,4,5))
+Vx_V1(A,B,C,newbornType = NULL, max = 20)
+
+Vx_V1_pop(A,B,C, max = 20)
+
+net_rep(B,C, newbornType = c(1,3,4,5))
+
+net_rep_pop(A,B,C, newbornType = c(1,3,4,5))
 
 average_age_production(A,B,C,c(1,3,4,5))
 
-average_age_production_sd(A,B,C,c(1,3,4,5))
+average_age_production_SD(A,B,C,c(1,3,4,5))
 
-Si(C)
+mean_age_residence(C)
 
-Si_sd(C)
+mean_age_residence_SD(C)
 
-pop_Si(A,B,C)
+mean_age_residence_pop(A,B,C)
 
-Q_mat(P)
+mean_age_residence_pop_SD(A,B,C)
 
-age_first_reproduction(Q)
+Q_mat(P, c(6))
 
-age_first_reproduction_sd(Q)
+maturity_age(P,Q_mat,stage = c(6),newbornType = c(1,3,4,5))
 
-generation_time(A,B,C,c(1,3,4,5))
+maturity_age_SD(P,Q_mat,stage = c(6),newbornType = c(1,3,4,5))
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+generation_time(A,B,C,newbornType = c(1,3,4,5))
