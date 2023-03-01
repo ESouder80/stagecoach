@@ -41,6 +41,7 @@ pop_growth <- function(A) {
 
   if(!is.matrix(A)) {stop("This is not a matrix")}
   if(!is.square.matrix(A)) {stop("This is not a square matrix")}
+  if(!is.numeric(A)) {stop("This is not numeric")}
   
    results <- Re(eigen(A)$values[1]) # need first real eigenvalue
    results
@@ -62,6 +63,7 @@ stable_stage_dist <- function(A){
   
   if(!is.matrix(A)) {stop("This is not a matrix")}
   if(!is.square.matrix(A)) {stop("This is not a square matrix")}
+  if(!is.numeric(A)) {stop("This is not numeric")}
   
   allvectors <- eigen(A) 
   num <- allvectors$vectors[,1] # need the first column of eigenvectors
@@ -86,6 +88,7 @@ reproductive_value <- function(A){
   
   if(!is.matrix(A)) {stop("This is not a matrix")}
   if(!is.square.matrix(A)) {stop("This is not a square matrix")}
+  if(!is.numeric(A)) {stop("This is not numeric")}
   
   num <- Re(eigen(t(A))$vectors[,1]) # transpose of matrix A
    # Column one of eigenvectors
@@ -110,6 +113,7 @@ sensitivy_mat <- function(A){
   
   if(!is.matrix(A)) {stop("This is not a matrix")}
   if(!is.square.matrix(A)) {stop("This is not a square matrix")}
+  if(!is.numeric(A)) {stop("This is not numeric")}
   
   num <- reproductive_value(A) %*% t(stable_stage_dist(A)) 
   #reproductive value multiplied by transpose of stable stage distribution
@@ -135,6 +139,7 @@ elasticity_mat <- function(A){
   
   if(!is.matrix(A)) {stop("This is not a matrix")}
   if(!is.square.matrix(A)) {stop("This is not a square matrix")}
+  if(!is.numeric(A)) {stop("This is not numeric")}
   
   x <- 1/pop_growth(A) 
   y <- sensitivy_mat(A)
@@ -174,6 +179,8 @@ n_bj <- function(A,B){
   
   if(!is.matrix(B)) {stop("This is not a matrix")}
   if(!is.square.matrix(B)) {stop("This is not a square matrix")}
+  if(!is.numeric(A)) {stop("This is not numeric")}
+  if(!is.numeric(B)) {stop("This is not numeric")}
   
   num <- B %*% stable_stage_dist(A) # need to use matrix multiplication
   den <- sum(num)
@@ -204,6 +211,9 @@ age_in_stage <- function(A, B, C){
   if(!is.square.matrix(A)) {stop("This is not a square matrix")}
   if(!is.square.matrix(B)) {stop("This is not a square matrix")}
   if(!is.square.matrix(C)) {stop("This is not a square matrix")}
+  if(!is.numeric(A)) {stop("This is not numeric")}
+  if(!is.numeric(B)) {stop("This is not numeric")}
+  if(!is.numeric(C)) {stop("This is not numeric")}
   
   Imat <- diag(dim(A)[1]) # Identity matrix
   lambda <- pop_growth(A)
@@ -239,6 +249,9 @@ age_in_stage_SD <- function(A, B, C){
   if(!is.square.matrix(A)) {stop("This is not a square matrix")}
   if(!is.square.matrix(B)) {stop("This is not a square matrix")}
   if(!is.square.matrix(C)) {stop("This is not a square matrix")}
+  if(!is.numeric(A)) {stop("This is not numeric")}
+  if(!is.numeric(B)) {stop("This is not numeric")}
+  if(!is.numeric(C)) {stop("This is not numeric")}
   
   Imat <- diag(dim(A)[1]) # Identity matrix
   num <- rowSums(solve((Imat - 1/pop_growth(A) * C) %*% (Imat - 1/pop_growth(A) * C) %*% (Imat - 1/pop_growth(A) * C)) %*% (Imat + 1/pop_growth(A) * C) %*% n_bj(A,B))
@@ -268,6 +281,8 @@ gam_i <- function(A,B){
   if(!is.matrix(B)) {stop("This is not a matrix")}
   if(!is.square.matrix(A)) {stop("This is not a square matrix")}
   if(!is.square.matrix(B)) {stop("This is not a square matrix")}
+  if(!is.numeric(A)) {stop("This is not numeric")}
+  if(!is.numeric(B)) {stop("This is not numeric")}
   
    scaled_rep_value <- function(A){
     # Scaling the reproductive value so the first one is 1
@@ -299,6 +314,7 @@ bet_i <- function(B){
  
   if(!is.matrix(B)) {stop("This is not a matrix")}
   if(!is.square.matrix(B)) {stop("This is not a square matrix")}
+  if(!is.numeric(B)) {stop("This is not numeric")}
   
    results <- colSums(B);  
   return(results)
@@ -327,6 +343,9 @@ pop_gen_time <- function(A, B, C){
   if(!is.square.matrix(A)) {stop("This is not a square matrix")}
   if(!is.square.matrix(B)) {stop("This is not a square matrix")}
   if(!is.square.matrix(C)) {stop("This is not a square matrix")}
+  if(!is.numeric(A)) {stop("This is not numeric")}
+  if(!is.numeric(B)) {stop("This is not numeric")}
+  if(!is.numeric(C)) {stop("This is not numeric")}
   
   num <- sum(age_in_stage(A,B,C) * stable_stage_dist(A) * gam_i(A,B)) 
   den <- sum(stable_stage_dist(A) * gam_i(A,B))
@@ -360,6 +379,9 @@ pit <- function(A,B,C, maxAge = 10){
   if(!is.square.matrix(A)) {stop("This is not a square matrix")}
   if(!is.square.matrix(B)) {stop("This is not a square matrix")}
   if(!is.square.matrix(C)) {stop("This is not a square matrix")}
+  if(!is.numeric(A)) {stop("This is not numeric")}
+  if(!is.numeric(B)) {stop("This is not numeric")}
+  if(!is.numeric(C)) {stop("This is not numeric")}
 
    p <- pop_growth(A)
   #lambda
@@ -410,6 +432,9 @@ stable_age_distribution <- function(A,B,C, maxAge = 10){
   if(!is.square.matrix(A)) {stop("This is not a square matrix")}
   if(!is.square.matrix(B)) {stop("This is not a square matrix")}
   if(!is.square.matrix(C)) {stop("This is not a square matrix")}
+  if(!is.numeric(A)) {stop("This is not numeric")}
+  if(!is.numeric(B)) {stop("This is not numeric")}
+  if(!is.numeric(C)) {stop("This is not numeric")}
   
   pp <- pit(A,B,C,maxAge)
   w <- stable_stage_dist(A)
@@ -440,6 +465,7 @@ life_expectancy <- function(P){
   
   if(!is.matrix(P)) {stop("This is not a matrix")}
   if(!is.square.matrix(P)) {stop("This is not a square matrix")}
+  if(!is.numeric(P)) {stop("This is not numeric")}
   
   Imat <- diag(dim(P)[1]) # Identity matrix
   
@@ -467,6 +493,7 @@ life_expectancy_SD <- function(P){
   
   if(!is.matrix(P)) {stop("This is not a matrix")}
   if(!is.square.matrix(P)) {stop("This is not a square matrix")}
+  if(!is.numeric(P)) {stop("This is not numeric")}
   
   Imat <- diag(dim(P)[1]) # Identity matrix
   #take the inverse and mulitply it through twice and multiply by the sum of (I + C)
@@ -496,6 +523,7 @@ Di_mat <- function(P){
   
   if(!is.matrix(P)) {stop("This is not a matrix")}
   if(!is.square.matrix(P)) {stop("This is not a square matrix")}
+  if(!is.numeric(P)) {stop("This is not numeric")}
   
   results <- array(0, dim = c(dim(P),ncol(P)))
   for (i  in 1:ncol(P)) {
@@ -525,6 +553,7 @@ meantime <- function(P){
   
   if(!is.matrix(P)) {stop("This is not a matrix")}
   if(!is.square.matrix(P)) {stop("This is not a square matrix")}
+  if(!is.numeric(P)) {stop("This is not numeric")}
   
   D <- Di_mat(P)
   results <- matrix(0, nrow= nrow(P), ncol= ncol(P))
@@ -563,6 +592,7 @@ meantime_SD <- function(P){
   
   if(!is.matrix(P)) {stop("This is not a matrix")} 
   if(!is.square.matrix(P)) {stop("This is not a square matrix")}
+  if(!is.numeric(P)) {stop("This is not numeric")}
   
    #OUTPUT DOESN'T MATCH STAGECOACH
   D <- Di_mat(P)
@@ -605,6 +635,7 @@ total_lifeSpan <- function(P){
   
   if(!is.matrix(P)) {stop("This is not a matrix")}
   if(!is.square.matrix(P)) {stop("This is not a square matrix")}
+  if(!is.numeric(P)) {stop("This is not numeric")}
   
   LE <- life_expectancy(P)
  # must add each stage number to the correct vector
@@ -646,6 +677,7 @@ total_lifeSpan_SD <- function(P){
   
   if(!is.matrix(P)) {stop("This is not a matrix")}
   if(!is.square.matrix(P)) {stop("This is not a square matrix")}
+  if(!is.numeric(P)) {stop("This is not numeric")}
   
   m <- meantime_SD(P)
   l <- life_expectancy_SD(P)
@@ -681,6 +713,7 @@ lx <- function (P, newbornTypes = NULL, max = 20) {
   
   if(!is.matrix(P)) {stop("This is not a matrix")}
   if(!is.square.matrix(P)) {stop("This is not a square matrix")}
+  if(!is.numeric(P)) {stop("This is not numeric")}
   if(is.null(newbornTypes)) newbornTypes = c(1:ncol(P));
   
   results <- matrix(1,max,ncol(P))
@@ -721,6 +754,9 @@ lx_pop <- function (A,B, P, max = 20) {
   if(!is.square.matrix(A)) {stop("This is not a square matrix")}
   if(!is.square.matrix(B)) {stop("This is not a square matrix")}
   if(!is.square.matrix(P)) {stop("This is not a square matrix")}
+  if(!is.numeric(A)) {stop("This is not numeric")}
+  if(!is.numeric(B)) {stop("This is not numeric")}
+  if(!is.numeric(P)) {stop("This is not numeric")}
   
   l <- lx(P,max = max)
   b <- n_bj(A,B)
@@ -757,6 +793,9 @@ fx_weighted <- function(A,B,C, newbornTypes = NULL, max= 20 ){
   if(!is.square.matrix(A)) {stop("This is not a square matrix")}
   if(!is.square.matrix(B)) {stop("This is not a square matrix")}
   if(!is.square.matrix(C)) {stop("This is not a square matrix")}
+  if(!is.numeric(A)) {stop("This is not numeric")}
+  if(!is.numeric(B)) {stop("This is not numeric")}
+  if(!is.numeric(C)) {stop("This is not numeric")}
   if(is.null(newbornTypes)) newbornTypes = c(1:ncol(P));
   
   results <- matrix(NA, max, ncol(P));
@@ -801,7 +840,10 @@ fx_unweighted <- function(A,B,C,newbornTypes = NULL, max = 20){
   if(!is.square.matrix(A)) {stop("This is not a square matrix")}
   if(!is.square.matrix(B)) {stop("This is not a square matrix")}
   if(!is.square.matrix(C)) {stop("This is not a square matrix")}
-   if(is.null(newbornTypes)) newbornTypes = c(1:ncol(P));
+  if(!is.numeric(A)) {stop("This is not numeric")}
+  if(!is.numeric(B)) {stop("This is not numeric")}
+  if(!is.numeric(C)) {stop("This is not numeric")}
+  if(is.null(newbornTypes)) newbornTypes = c(1:ncol(P));
   # newbornTypes if only want stages that can reproduce
   
   results <- matrix(NA, max, ncol(P));
@@ -843,6 +885,9 @@ fx_pop_weighted <- function(A,B,C, max = 20){
   if(!is.square.matrix(A)) {stop("This is not a square matrix")}
   if(!is.square.matrix(B)) {stop("This is not a square matrix")}
   if(!is.square.matrix(C)) {stop("This is not a square matrix")}
+  if(!is.numeric(A)) {stop("This is not numeric")}
+  if(!is.numeric(B)) {stop("This is not numeric")}
+  if(!is.numeric(C)) {stop("This is not numeric")}
   
    f <- fx_weighted(A,B,C)
   b <- n_bj(A,B)
@@ -876,6 +921,9 @@ fx_pop_unweighted <- function(A,B,C, max = 20){
   if(!is.square.matrix(A)) {stop("This is not a square matrix")}
   if(!is.square.matrix(B)) {stop("This is not a square matrix")}
   if(!is.square.matrix(C)) {stop("This is not a square matrix")}
+  if(!is.numeric(A)) {stop("This is not numeric")}
+  if(!is.numeric(B)) {stop("This is not numeric")}
+  if(!is.numeric(C)) {stop("This is not numeric")}
   
   f <-fx_unweighted(A,B,C)
   b <- n_bj(A,B)
@@ -913,6 +961,9 @@ Vx_V1 <- function(A,B,C,newbornType = NULL, max = 20){
   if(!is.square.matrix(A)) {stop("This is not a square matrix")}
   if(!is.square.matrix(B)) {stop("This is not a square matrix")}
   if(!is.square.matrix(C)) {stop("This is not a square matrix")}
+  if(!is.numeric(A)) {stop("This is not numeric")}
+  if(!is.numeric(B)) {stop("This is not numeric")}
+  if(!is.numeric(C)) {stop("This is not numeric")}
   if(is.null(newbornTypes)) newbornTypes = c(1:ncol(C));
   
   age <- function(A,B){
@@ -962,6 +1013,9 @@ Vx_V1_pop <- function(A,B,C, max = 20){
   if(!is.square.matrix(A)) {stop("This is not a square matrix")}
   if(!is.square.matrix(B)) {stop("This is not a square matrix")}
   if(!is.square.matrix(C)) {stop("This is not a square matrix")}
+  if(!is.numeric(A)) {stop("This is not numeric")}
+  if(!is.numeric(B)) {stop("This is not numeric")}
+  if(!is.numeric(C)) {stop("This is not numeric")}
   #if(is.null(newbornTypes)) newbornTypes = c(1:ncol(C));
  
   res <- NULL
@@ -997,6 +1051,8 @@ net_rep <- function(B, C, newbornType){
   if(!is.matrix(C)) {stop("This is not a matrix")}
   if(!is.square.matrix(B)) {stop("This is not a square matrix")}
   if(!is.square.matrix(C)) {stop("This is not a square matrix")}
+  if(!is.numeric(B)) {stop("This is not numeric")}
+  if(!is.numeric(C)) {stop("This is not numeric")}
   
   Imat <- diag(dim(C)[1]) # Identity matrix
   y <- g(B)
@@ -1029,6 +1085,9 @@ net_rep_pop <- function(A,B,C,newbornType){
   if(!is.square.matrix(A)) {stop("This is not a square matrix")}
   if(!is.square.matrix(B)) {stop("This is not a square matrix")}
   if(!is.square.matrix(C)) {stop("This is not a square matrix")}
+  if(!is.numeric(A)) {stop("This is not numeric")}
+  if(!is.numeric(B)) {stop("This is not numeric")}
+  if(!is.numeric(C)) {stop("This is not numeric")}
   
   R <- net_rep(B,C,newbornType)
   b <- n_bj(A,B)[newbornType]
@@ -1061,6 +1120,9 @@ average_age_production <- function(A,B,C,newbornType){
   if(!is.square.matrix(A)) {stop("This is not a square matrix")}
   if(!is.square.matrix(B)) {stop("This is not a square matrix")}
   if(!is.square.matrix(C)) {stop("This is not a square matrix")}
+  if(!is.numeric(A)) {stop("This is not numeric")}
+  if(!is.numeric(B)) {stop("This is not numeric")}
+  if(!is.numeric(C)) {stop("This is not numeric")}
   
   Imat <- diag(dim(C)[1]) #Identity matrix
   num <- sapply(newbornType, function(x) colSums(solve((Imat - C) %^% 2))  %*% colSums(Gammai(A,B)))
@@ -1094,6 +1156,9 @@ average_age_production_SD <- function(A,B,C,newbornType){
   if(!is.square.matrix(A)) {stop("This is not a square matrix")}
   if(!is.square.matrix(B)) {stop("This is not a square matrix")}
   if(!is.square.matrix(C)) {stop("This is not a square matrix")}
+  if(!is.numeric(A)) {stop("This is not numeric")}
+  if(!is.numeric(B)) {stop("This is not numeric")}
+  if(!is.numeric(C)) {stop("This is not numeric")}
   
   Imat <- diag(dim(C)[1]) #Identity matrix
   num <- sapply(newbornType, function(x) colSums((Imat + C) %*% (solve(Imat - C) %^% 3)) %*% colSums(Gammai(A,B)))
@@ -1122,6 +1187,7 @@ mean_age_residence <- function(C){
 
   if(!is.matrix(C)) {stop("This is not a matrix")}
   if(!is.square.matrix(C)) {stop("This is not a square matrix")}
+  if(!is.numeric(C)) {stop("This is not numeric")}
   
 #Need to do by newbornType and make NaN = 0
 Imat <- diag(dim(C)[1]) #Identity matrix
@@ -1153,6 +1219,7 @@ mean_age_residence_SD <- function(C){
  
   if(!is.matrix(C)) {stop("This is not a matrix")}
   if(!is.square.matrix(C)) {stop("This is not a square matrix")}
+  if(!is.numeric(C)) {stop("This is not numeric")}
    #Need to fix this so it just gives the newbornTypes 1,3,4,5
   
   S <- mean_age_residence(C,newbornType)
@@ -1190,6 +1257,9 @@ mean_age_residence_pop <- function(A,B,C){
   if(!is.square.matrix(A)) {stop("This is not a square matrix")}
   if(!is.square.matrix(B)) {stop("This is not a square matrix")}
   if(!is.square.matrix(C)) {stop("This is not a square matrix")}
+  if(!is.numeric(A)) {stop("This is not numeric")}
+  if(!is.numeric(B)) {stop("This is not numeric")}
+  if(!is.numeric(C)) {stop("This is not numeric")}
   
   bj <- n_bj(A,B)
   Imat <- diag(dim(C)[1]) # Identity matrix
@@ -1225,6 +1295,9 @@ mean_age_residence_pop_SD <- function(A,B,C){
   if(!is.square.matrix(A)) {stop("This is not a square matrix")}
   if(!is.square.matrix(B)) {stop("This is not a square matrix")}
   if(!is.square.matrix(C)) {stop("This is not a square matrix")}
+  if(!is.numeric(A)) {stop("This is not numeric")}
+  if(!is.numeric(B)) {stop("This is not numeric")}
+  if(!is.numeric(C)) {stop("This is not numeric")}
   
   #DOESN'T MATCH OUTPUT
   s <- mean_age_residence_pop(A,B,C)
@@ -1257,6 +1330,7 @@ Q_mat <- function(P,stage){
   
   if(!is.matrix(P)) {stop("This is not a matrix")}
   if(!is.square.matrix(P)) {stop("This is not a square matrix")}
+  if(!is.numeric(P)) {stop("This is not numeric")}
   
   results <- matrix(0, nrow = nrow(P), ncol = ncol(P))
   for (i in 1:dim(P)[1]) {
@@ -1295,6 +1369,7 @@ maturity_age <- function(P,Q_mat,stage,newbornType){
   
   if(!is.matrix(P)) {stop("This is not a matrix")}
   if(!is.square.matrix(P)) {stop("This is not a square matrix")}
+  if(!is.numeric(P)) {stop("This is not numeric")}
   
   q <- Q_mat(P,stage)
   Imat <- diag(x = 1, dim(P)) # Identity matrix
@@ -1328,6 +1403,7 @@ maturity_age_SD <- function(P,Q_mat,stage,newbornType){
 
   if(!is.matrix(P)) {stop("This is not a matrix")}
   if(!is.square.matrix(P)) {stop("This is not a square matrix")}
+  if(!is.numeric(P)) {stop("This is not numeric")}
   
   #DOESN'T MATCH OUTPUT
  q <- Q_mat(P,stage)
@@ -1363,6 +1439,9 @@ generation_time <- function(A,B,C,newbornType){
   if(!is.square.matrix(A)) {stop("This is not a square matrix")}
   if(!is.square.matrix(B)) {stop("This is not a square matrix")}
   if(!is.square.matrix(C)) {stop("This is not a square matrix")}
+  if(!is.numeric(A)) {stop("This is not numeric")}
+  if(!is.numeric(B)) {stop("This is not numeric")}
+  if(!is.numeric(C)) {stop("This is not numeric")}
   
   lam <- pop_growth(A)
   R <- sum(net_rep_pop(A,B,C,newbornType))
