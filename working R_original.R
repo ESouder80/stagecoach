@@ -932,9 +932,7 @@ fx_pop_unweighted <- function(A,B,C, max = 20){
 }
 
 
-
-
-Vx_V1 <- function(A,B,C,newbornType = NULL, max = 20){
+Vx_V1 <- function(A,B,C,newbornTypes = NULL, max = 20){
   
   
   #########################################################################
@@ -951,7 +949,7 @@ Vx_V1 <- function(A,B,C,newbornType = NULL, max = 20){
   ##  Author/s:                                                          ##
   ##  Dr. Simone Blomberg                                                ##
   ##  Erin Souder                                                        ##
-  ##  Date: 03/01/2023                                                   ##
+  ##  Date: 02/03/2023                                                   ##
   #########################################################################
   
   
@@ -976,14 +974,18 @@ Vx_V1 <- function(A,B,C,newbornType = NULL, max = 20){
   }
   
   
-  
-  results <- NULL
   v <- age(A,B)
-  for (x in 1:max) {
-    results <- cbind(results,(colSums(v * C %^%(x-1))[newbornType])/ colSums(C %^% (x-1))[newbornType])
+  results <- matrix(v,max,ncol(C))
+  
+  for (x in 2:max) {
+    Cx1 <- C %^% (x - 1)
+    num <- t(Cx1) %*% v
+    den <- colSums(Cx1)
+    results[x,] <- num/den
+    results[x, den == 0] = 0
     
   }
-  results
+  return(results)
 }
 
 
@@ -1016,16 +1018,12 @@ Vx_V1_pop <- function(A,B,C, max = 20){
   if(!is.numeric(A)) {stop("This is not numeric")}
   if(!is.numeric(B)) {stop("This is not numeric")}
   if(!is.numeric(C)) {stop("This is not numeric")}
-  #if(is.null(newbornTypes)) newbornTypes = c(1:ncol(C));
  
-  res <- NULL
-  vx <- Vx_V1(A,B,C,newbornType,max)
-  n <- n_bj(A,B)[newbornType]
-  for (x in 1:max) {
-    res <- cbind(res, vx[,x] * n)
-  }
-  results <- colSums(res)
- results
+  vx <- Vx_V1(A,B,C,max)
+  b <- n_bj(A,B)
+  
+  results  = vx %*% b
+ return(results)
 }
 
 
