@@ -980,6 +980,7 @@ Vx_V1 <- function(A,B,C,newbornTypes = NULL, max = 20){
   for (x in 2:max) {
     Cx1 <- C %^% (x - 1)
     num <- t(Cx1) %*% v
+    # Use transpose here so multiplication takes place
     den <- colSums(Cx1)
     results[x,] <- num/den
     results[x, den == 0] = 0
@@ -1028,7 +1029,7 @@ Vx_V1_pop <- function(A,B,C, max = 20){
 
 
 
-net_rep <- function(B, C, newbornType){
+net_rep <- function(B,C,newbornTypes = NULL){
   
   
   #######################################################################
@@ -1051,15 +1052,17 @@ net_rep <- function(B, C, newbornType){
   if(!is.square.matrix(C)) {stop("This is not a square matrix")}
   if(!is.numeric(B)) {stop("This is not numeric")}
   if(!is.numeric(C)) {stop("This is not numeric")}
+  if(is.null(newbornTypes)) newbornTypes = c(1:ncol(C));
+  
   
   Imat <- diag(dim(C)[1]) # Identity matrix
-  y <- g(B)
-  results <- colSums(solve(Imat - C) * y)[newbornType]
-  results
+  beta_i <- bet_i(B)
+  results <- t(solve(Imat - C)) %*% beta_i 
+  results[newbornTypes,]
 }
 
 
-net_rep_pop <- function(A,B,C,newbornType){
+net_rep_pop <- function(A,B,C){
   
   
   ##########################################################################################
@@ -1087,9 +1090,9 @@ net_rep_pop <- function(A,B,C,newbornType){
   if(!is.numeric(B)) {stop("This is not numeric")}
   if(!is.numeric(C)) {stop("This is not numeric")}
   
-  R <- net_rep(B,C,newbornType)
-  b <- n_bj(A,B)[newbornType]
-  results <- sum(R * b)
+  R <- net_rep(B,C)
+  b <- n_bj(A,B)
+  results <- R %*% b
  results
 }
 
