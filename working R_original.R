@@ -1058,6 +1058,7 @@ net_rep <- function(B,C,newbornTypes = NULL){
   Imat <- diag(dim(C)[1]) # Identity matrix
   beta_i <- bet_i(B)
   results <- t(solve(Imat - C)) %*% beta_i 
+  # need to use transpose here
   results[newbornTypes,]
 }
 
@@ -1096,7 +1097,8 @@ net_rep_pop <- function(A,B,C){
  results
 }
 
-average_age_production <- function(A,B,C,newbornType){
+
+average_age_production_unweighted <- function(A,B,C,newbornTypes = NULL){
   
   
   ###################################################################
@@ -1124,13 +1126,18 @@ average_age_production <- function(A,B,C,newbornType){
   if(!is.numeric(A)) {stop("This is not numeric")}
   if(!is.numeric(B)) {stop("This is not numeric")}
   if(!is.numeric(C)) {stop("This is not numeric")}
+  if(is.null(newbornTypes)) newbornTypes = c(1:ncol(C));
   
   Imat <- diag(dim(C)[1]) #Identity matrix
-  num <- sapply(newbornType, function(x) colSums(solve((Imat - C) %^% 2))  %*% colSums(Gammai(A,B)))
-  den <- net_rep(A,B,C,newbornType)
+  betai <- bet_i(B)
+  num1 <- solve((Imat - C) %*% (Imat - C))
+  num <- t(num1) %*% betai
+  den <- net_rep(B,C)
   results <- num/den
-  results[newbornType]
+  results
 }
+
+
 
 average_age_production_SD <- function(A,B,C,newbornType){
   
