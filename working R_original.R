@@ -1007,7 +1007,7 @@ Vx_V1_pop <- function(A,B,C, max = 20){
   ##  Author/s:                                                                             ##
   ##  Dr. Simone Blomberg                                                                   ##
   ##  Erin Souder                                                                           ##
-  ##  Date: 03/01/2023                                                                      ##
+  ##  Date: 14/03/2023                                                                      ##
   ############################################################################################
   
   if(!is.matrix(A)) {stop("This is not a matrix")}
@@ -1043,7 +1043,7 @@ net_rep <- function(B,C,newbornTypes = NULL){
   ##  The average number of offspring during an individual's lifetime  ##
   ##  Author/s:                                                        ##
   ##  Erin Souder                                                      ##
-  ##  Date: 03/01/2023                                                 ##
+  ##  Date: 14/03/2023                                                 ##
   #######################################################################
   
   if(!is.matrix(B)) {stop("This is not a matrix")}
@@ -1078,7 +1078,7 @@ net_rep_pop <- function(A,B,C){
   ##  The average number of offspring during an individual's lifetime for the population  ##
   ##  Author/s:                                                                           ##
   ##  Erin Souder                                                                         ##
-  ##  Date: 03/01/2023                                                                    ##
+  ##  Date: 14/03/2023                                                                    ##
   ##########################################################################################
   
   if(!is.matrix(A)) {stop("This is not a matrix")}
@@ -1114,7 +1114,7 @@ average_age_production_unweighted <- function(A,B,C,newbornTypes = NULL){
   ##  Author/s:                                                    ##
   ##  Dr. Simone Blomberg                                          ##
   ##  Erin Souder                                                  ##
-  ##  Date: 03/01/2023                                             ##
+  ##  Date: 28/03/2023                                             ##
   ###################################################################
   
   if(!is.matrix(A)) {stop("This is not a matrix")}
@@ -1128,18 +1128,57 @@ average_age_production_unweighted <- function(A,B,C,newbornTypes = NULL){
   if(!is.numeric(C)) {stop("This is not numeric")}
   if(is.null(newbornTypes)) newbornTypes = c(1:ncol(C));
   
-  Imat <- diag(dim(C)[1]) #Identity matrix
+  Imat <- diag(dim(C)[1]) # Identity matrix
   betai <- bet_i(B)
   num1 <- solve((Imat - C) %*% (Imat - C))
   num <- t(num1) %*% betai
+  # Use beta for unweighted numbers
   den <- net_rep(B,C)
   results <- num/den
   results
 }
 
+average_age_production_weighted <- function(A,B,C,newbornTypes = NULL){
+  
+  
+  ###################################################################
+  ##  Function to determine the average age of first reproduction  ##
+  ##  Equation 27                                                  ##
+  ##  Argument/s:                                                  ##
+  ##  A: Transition matrix A                                       ##
+  ##  C: Survival matrix P + Fission matrix F                      ##
+  ##  B: Birth matrix                                              ##
+  ##  newbornType: type j newborn                                  ##
+  ##  Return Value/s:                                              ##
+  ##  The average age of first reproduction for each stage j       ##
+  ##  Author/s:                                                    ##
+  ##  Dr. Simone Blomberg                                          ##
+  ##  Erin Souder                                                  ##
+  ##  Date: 28/03/2023                                             ##
+  ###################################################################
+  
+  if(!is.matrix(A)) {stop("This is not a matrix")}
+  if(!is.matrix(B)) {stop("This is not a matrix")}
+  if(!is.matrix(C)) {stop("This is not a matrix")}
+  if(!is.square.matrix(A)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(B)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(C)) {stop("This is not a square matrix")}
+  if(!is.numeric(A)) {stop("This is not numeric")}
+  if(!is.numeric(B)) {stop("This is not numeric")}
+  if(!is.numeric(C)) {stop("This is not numeric")}
+  if(is.null(newbornTypes)) newbornTypes = c(1:ncol(C));
+  
+  Imat <- diag(dim(C)[1]) # Identity matrix
+  gammai <- gam_i(A,B)
+  num1 <- solve((Imat - C) %*% (Imat - C))
+  num <- t(num1) %*% gammai
+  # Use gam for weighted numbers
+  den <- net_rep(B,C)
+  results <- num/den
+  results
+}
 
-
-average_age_production_SD <- function(A,B,C,newbornType){
+average_age_production_SD_unweighted <- function(A,B,C,newbornTypes = NULL){
   
   
   #############################################################################################
@@ -1155,7 +1194,179 @@ average_age_production_SD <- function(A,B,C,newbornType){
   ##  Author/s:                                                                              ##
   ##  Dr. Simone Blomberg                                                                    ##
   ##  Erin Souder                                                                            ##
-  ##  Date: 03/01/2023                                                                       ##
+  ##  Date: 28/03/2023                                                                       ##
+  #############################################################################################
+  
+  if(!is.matrix(A)) {stop("This is not a matrix")}
+  if(!is.matrix(B)) {stop("This is not a matrix")}
+  if(!is.matrix(C)) {stop("This is not a matrix")}
+  if(!is.square.matrix(A)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(B)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(C)) {stop("This is not a square matrix")}
+  if(!is.numeric(A)) {stop("This is not numeric")}
+  if(!is.numeric(B)) {stop("This is not numeric")}
+  if(!is.numeric(C)) {stop("This is not numeric")}
+  if(is.null(newbornTypes)) newbornTypes = c(1:ncol(C));
+  
+  Imat <- diag(dim(C)[1]) # Identity matrix
+  betai <- bet_i(B)
+  # Use beta for unweighted numbers
+  a <- average_age_production(A,B,C)
+  n1 <- (I + C) %*% solve((I - C) %*% (I - C) %*% (I - C))
+  num <- t(n1) %*% betai
+  den <- net_rep(B,C)
+  results <- sqrt((num/den) - (a ^ 2))
+  results
+}
+
+average_age_production_SD_weighted <- function(A,B,C,newbornTypes = NULL){
+  
+  
+  #############################################################################################
+  ##  Function to determine the standard deviation of the average age at first reproduction  ##
+  ##  Equation 28                                                                            ##
+  ##  Argument/s:                                                                            ##
+  ##  A: Transition matrix A                                                                 ##
+  ##  C: Survival matrix P + Fission matrix F                                                ##
+  ##  B: Birth matrix                                                                        ##
+  ##  newbornType: type j newborn                                                            ##
+  ##  Return Value/s:                                                                        ##
+  ##  The standard deviation of the average age of first reproduction for each stage j       ##
+  ##  Author/s:                                                                              ##
+  ##  Dr. Simone Blomberg                                                                    ##
+  ##  Erin Souder                                                                            ##
+  ##  Date: 28/03/2023                                                                       ##
+  #############################################################################################
+  
+  if(!is.matrix(A)) {stop("This is not a matrix")}
+  if(!is.matrix(B)) {stop("This is not a matrix")}
+  if(!is.matrix(C)) {stop("This is not a matrix")}
+  if(!is.square.matrix(A)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(B)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(C)) {stop("This is not a square matrix")}
+  if(!is.numeric(A)) {stop("This is not numeric")}
+  if(!is.numeric(B)) {stop("This is not numeric")}
+  if(!is.numeric(C)) {stop("This is not numeric")}
+  if(is.null(newbornTypes)) newbornTypes = c(1:ncol(C));
+  
+  Imat <- diag(dim(C)[1]) # Identity matrix
+  gammai <- gam_i(A,B)
+  # Use gamma for weighted numbers
+  a <- average_age_production(A,B,C)
+  n1 <- (I + C) %*% solve((I - C) %*% (I - C) %*% (I - C))
+  num <- t(n1) %*% gammai
+  den <- net_rep(B,C)
+  results <- sqrt((num/den) - (a ^ 2))
+  results
+}
+
+average_age_production_pop_unweighted <- function(A,B,C){
+  
+  
+  ###################################################################
+  ##  Function to determine the average age of first reproduction  ##
+  ##  Table 2                                                      ##
+  ##  Argument/s:                                                  ##
+  ##  A: Transition matrix A                                       ##
+  ##  C: Survival matrix P + Fission matrix F                      ##
+  ##  B: Birth matrix                                              ##
+  ##  newbornType: type j newborn                                  ##
+  ##  Return Value/s:                                              ##
+  ##  The average age of first reproduction for each stage j       ##
+  ##  Author/s:                                                    ##
+  ##  Dr. Simone Blomberg                                          ##
+  ##  Erin Souder                                                  ##
+  ##  Date: 28/03/2023                                             ##
+  ###################################################################
+  
+  if(!is.matrix(A)) {stop("This is not a matrix")}
+  if(!is.matrix(B)) {stop("This is not a matrix")}
+  if(!is.matrix(C)) {stop("This is not a matrix")}
+  if(!is.square.matrix(A)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(B)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(C)) {stop("This is not a square matrix")}
+  if(!is.numeric(A)) {stop("This is not numeric")}
+  if(!is.numeric(B)) {stop("This is not numeric")}
+  if(!is.numeric(C)) {stop("This is not numeric")}
+  
+  
+  ##################
+  # I am not sure if this is the correct number so if someone else could check the math
+  ##################
+
+  Imat <- diag(dim(C)[1]) # Identity matrix
+  betai<- bet_i(B)
+  bj <- n_bj(A,B)
+  n1 <- solve((Imat - C) %*% (Imat - C))
+  num <- t(n1) %*% betai 
+  # Use beta for unweighted numbers
+  den <- net_rep(B,C)
+  results <- t(num/den) %*% bj
+  results
+}
+
+average_age_production_pop_weighted <- function(A,B,C){
+  
+  
+  ###################################################################
+  ##  Function to determine the average age of first reproduction  ##
+  ##  Table 2                                                      ##
+  ##  Argument/s:                                                  ##
+  ##  A: Transition matrix A                                       ##
+  ##  C: Survival matrix P + Fission matrix F                      ##
+  ##  B: Birth matrix                                              ##
+  ##  newbornType: type j newborn                                  ##
+  ##  Return Value/s:                                              ##
+  ##  The average age of first reproduction for each stage j       ##
+  ##  Author/s:                                                    ##
+  ##  Dr. Simone Blomberg                                          ##
+  ##  Erin Souder                                                  ##
+  ##  Date: 28/03/2023                                             ##
+  ###################################################################
+  
+  if(!is.matrix(A)) {stop("This is not a matrix")}
+  if(!is.matrix(B)) {stop("This is not a matrix")}
+  if(!is.matrix(C)) {stop("This is not a matrix")}
+  if(!is.square.matrix(A)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(B)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(C)) {stop("This is not a square matrix")}
+  if(!is.numeric(A)) {stop("This is not numeric")}
+  if(!is.numeric(B)) {stop("This is not numeric")}
+  if(!is.numeric(C)) {stop("This is not numeric")}
+  
+  
+  ##################
+  # I am not sure if this is the correct number so if someone else could check the math
+  ##################
+  
+  Imat <- diag(dim(C)[1]) # Identity matrix
+  gammai <- gam_i(A,B)
+  bj <- n_bj(A,B)
+  n1 <- solve((Imat - C) %*% (Imat - C))
+  num <- t(n1) %*% gammai 
+  # Use gamma for weighted numbers
+  den <- net_rep(B,C)
+  results <- t(num/den) %*% bj
+  results
+}
+
+average_age_production_SD_pop_unweighted <- function(A,B,C){
+  
+  
+  #############################################################################################
+  ##  Function to determine the standard deviation of the average age at first reproduction  ##
+  ##  Equation 28                                                                            ##
+  ##  Argument/s:                                                                            ##
+  ##  A: Transition matrix A                                                                 ##
+  ##  C: Survival matrix P + Fission matrix F                                                ##
+  ##  B: Birth matrix                                                                        ##
+  ##  newbornType: type j newborn                                                            ##
+  ##  Return Value/s:                                                                        ##
+  ##  The standard deviation of the average age of first reproduction for each stage j       ##
+  ##  Author/s:                                                                              ##
+  ##  Dr. Simone Blomberg                                                                    ##
+  ##  Erin Souder                                                                            ##
+  ##  Date: 28/03/2023                                                                       ##
   #############################################################################################
   
   if(!is.matrix(A)) {stop("This is not a matrix")}
@@ -1168,11 +1379,67 @@ average_age_production_SD <- function(A,B,C,newbornType){
   if(!is.numeric(B)) {stop("This is not numeric")}
   if(!is.numeric(C)) {stop("This is not numeric")}
   
-  Imat <- diag(dim(C)[1]) #Identity matrix
-  num <- sapply(newbornType, function(x) colSums((Imat + C) %*% (solve(Imat - C) %^% 3)) %*% colSums(Gammai(A,B)))
-  den <- net_rep(A,B,C,newbornType)
-  results <- sqrt((num/den) - ((average_age_production(A,B,C,newbornType)) ^ 2))
-  results[newbornType]
+  ########### 
+  # Can someone check math? Not sure if this is right #
+  ###########
+  
+  Imat <- diag(dim(C)[1]) # Identity matrix
+  betai <- bet_i(B)
+  # Use beta for weighted numbers
+  bj <- n_bj(A,B)
+  a <- average_age_production_pop_unweighted(A,B,C)
+  n1 <- (I + C) %*% solve((I - C) %*% (I - C) %*% (I - C))
+  num <- (t(n1) %*% betai) 
+  den <- net_rep(B,C)
+  r1 <- t(num/den) %*% bj 
+  results <- sqrt((r1) - (a ^ 2))
+  results 
+}
+
+average_age_production_SD_pop_weighted <- function(A,B,C){
+  
+  
+  #############################################################################################
+  ##  Function to determine the standard deviation of the average age at first reproduction  ##
+  ##  Equation 28                                                                            ##
+  ##  Argument/s:                                                                            ##
+  ##  A: Transition matrix A                                                                 ##
+  ##  C: Survival matrix P + Fission matrix F                                                ##
+  ##  B: Birth matrix                                                                        ##
+  ##  newbornType: type j newborn                                                            ##
+  ##  Return Value/s:                                                                        ##
+  ##  The standard deviation of the average age of first reproduction for each stage j       ##
+  ##  Author/s:                                                                              ##
+  ##  Dr. Simone Blomberg                                                                    ##
+  ##  Erin Souder                                                                            ##
+  ##  Date: 28/03/2023                                                                       ##
+  #############################################################################################
+  
+  if(!is.matrix(A)) {stop("This is not a matrix")}
+  if(!is.matrix(B)) {stop("This is not a matrix")}
+  if(!is.matrix(C)) {stop("This is not a matrix")}
+  if(!is.square.matrix(A)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(B)) {stop("This is not a square matrix")}
+  if(!is.square.matrix(C)) {stop("This is not a square matrix")}
+  if(!is.numeric(A)) {stop("This is not numeric")}
+  if(!is.numeric(B)) {stop("This is not numeric")}
+  if(!is.numeric(C)) {stop("This is not numeric")}
+  
+  ##########
+  # Can someone check the math to check if this is right? #
+  ##########
+  
+  Imat <- diag(dim(C)[1]) # Identity matrix
+  gammai <- gam_i(A,B)
+  # Use gamma for weighted numbers
+  bj <- n_bj(A,B)
+  a <- average_age_production_pop_weighted(A,B,C)
+  n1 <- (I + C) %*% solve((I - C) %*% (I - C) %*% (I - C))
+  num <- (t(n1) %*% gammai)
+  den <- net_rep(B,C)
+  r1 <- t(num/den) %*% bj
+  results <- sqrt(abs(r1 - (a ^2)))
+  results 
 }
 
 mean_age_residence <- function(C){
