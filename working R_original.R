@@ -496,9 +496,9 @@ life_expectancy_SD <- function(P){
   if(!is.numeric(P)) {stop("This is not numeric")}
   
   Imat <- diag(dim(P)[1]) # Identity matrix
-  #take the inverse and mulitply it through twice and multiply by the sum of (I + C)
+  #take the inverse and multiply it through twice and multiply by the sum of (I + C)
   y <- colSums((Imat + P) %*% (solve(Imat - P) %^% 2))
-  #take the squareroot of (this answer minus life expectancy squared) for the SD
+  #take the square root of (this answer minus life expectancy squared) for the SD
   results <- sqrt(y - (life_expectancy(P))^2) 
   results
 }
@@ -1497,7 +1497,7 @@ mean_age_residence_SD <- function(C){
   if(!is.numeric(C)) {stop("This is not numeric")}
    #Need to fix this so it just gives the newbornTypes 1,3,4,5
   
-  S <- mean_age_residence(C,newbornType)
+  S <- mean_age_residence(C)
   Imat <- diag(dim(C)[1])  # identity matrix
  
   num <- (Imat + C) %*% solve((Imat - C) %^% 3)
@@ -1576,17 +1576,17 @@ mean_age_residence_pop_SD <- function(A,B,C){
   
   #DOESN'T MATCH OUTPUT
   s <- mean_age_residence_pop(A,B,C)
-  b <- n_bj(A,B)
+  bj <- n_bj(A,B)
   Imat <- diag(x = 1, dim(C)) # Identity matrix
   # identity matrix
-  num <- ((Imat + C) %*% solve(Imat - C) %^% 3) %*% b
-  den <- (solve(Imat - C)) %*% b
-  results <- sqrt((num/den) - s ^ 2)
+  num <- ((Imat + C) %*% solve(Imat - C) %^% (Imat - C) %*% (Imat - C)) %*% bj
+  den <- (solve(Imat - C)) %*% bj
+  results <- sqrt(abs((num/den) - s ^ 2))
   results
 }
 
 
-Q_mat <- function(P,stage){
+Q_mat <- function(P,B){
   
   
   ###################################################################
@@ -1607,10 +1607,10 @@ Q_mat <- function(P,stage){
   if(!is.square.matrix(P)) {stop("This is not a square matrix")}
   if(!is.numeric(P)) {stop("This is not numeric")}
   
-  results <- matrix(0, nrow = nrow(P), ncol = ncol(P))
+  results <- array(0, nrow = nrow(P), ncol = ncol(P))
   for (i in 1:dim(P)[1]) {
     for (j in  1: dim(P)[2]){
-      if(j == stage){
+      if(j == B[2]){
         results[i,j] <- 0
       }
       else{
@@ -1623,7 +1623,7 @@ Q_mat <- function(P,stage){
 }  
 
 
-maturity_age <- function(P,Q_mat,stage,newbornType){
+maturity_age <- function(P, Q_mat, B, stage, newbornTypes = NULL ){
   
   
   #################################################################
@@ -1632,8 +1632,8 @@ maturity_age <- function(P,Q_mat,stage,newbornType){
   ##  Argument/s:                                                ##
   ##  P: Survival matrix P                                       ##
   ##  Q_mat: Equation 14                                         ##
-  ##  stage: stage at which reproduction occurs                  ##
-  ##  newbornType: newborn type j                                ##
+  ##  stage: stage at which reproduction occurs [i,]             ##
+  ##  newbornTypes: newborn type j                               ##
   ##  Return Value/s:                                            ##
   ##  Average age of maturity at each stage j                    ##
   ##  Author/s:                                                  ##
@@ -1645,19 +1645,23 @@ maturity_age <- function(P,Q_mat,stage,newbornType){
   if(!is.matrix(P)) {stop("This is not a matrix")}
   if(!is.square.matrix(P)) {stop("This is not a square matrix")}
   if(!is.numeric(P)) {stop("This is not numeric")}
+  if(is.null(newbornTypes)) newbornTypes = c(1:ncol(P));
   
-  q <- Q_mat(P,stage)
+  ### HOW DO I PULL JUST [6,] ####
+  
+  Q <- Q_mat(P,B)
   Imat <- diag(x = 1, dim(P)) # Identity matrix
   # identity matrix
-  num <- (solve((Imat - q) %*% (Imat - q)))
-  den <- (solve(Imat - q))
+  num <- (solve((Imat - Q) %*% (Imat - Q)))
+  den <- (solve(Imat - Q))
   
-  results <- num/den 
-  results[stage,][newbornType]
+  results <- num/den  
+  
+  results[stage,]
 }
 
 
-maturity_age_SD <- function(P,Q_mat,stage,newbornType){
+maturity_age_SD <- function(P, Q_mat, B, stage,newbornTypes = NULL){
   
   
   ###################################################################################
@@ -1679,19 +1683,61 @@ maturity_age_SD <- function(P,Q_mat,stage,newbornType){
   if(!is.matrix(P)) {stop("This is not a matrix")}
   if(!is.square.matrix(P)) {stop("This is not a square matrix")}
   if(!is.numeric(P)) {stop("This is not numeric")}
+  if(is.null(newbornTypes)) newbornTypes = c(1:ncol(P));
   
-  #DOESN'T MATCH OUTPUT
- q <- Q_mat(P,stage)
- m <- maturity_age(P,Q_mat,stage,newbornType)
+  ###### HOW DO I PULL JUST [6,] ####
+  
+ Q <- Q_mat(P,B)
+ m <- maturity_age(P,Q_mat,B,stage)
  Imat <- diag(dim(P)[1]) # Identity matrix
-  num <- (Imat + q) %*% (solve((Imat - q) %*% (Imat - q) %*% (Imat - q)))
-  den <- solve(Imat - q)
-   results <- sqrt(abs(num/den) - m^2)
- results[stage,][newbornType]
+ num <- (Imat + Q) %*% (solve((Imat - Q) %*% (Imat - Q) %*% (Imat - Q)))
+ den <- solve(Imat - Q)
+ results <- sqrt(abs(num/den) - m^2)
+ results[stage,]
+}
+
+maturity_age_pop <- function(A, P, Q_mat, B){
+  
+  
+  ########################################################################
+  ##  Function to determine average age of maturity (E) for population  ##
+  ##  Table 2                                                           ##
+  ##  Argument/s:                                                       ##
+  ##  P: Survival matrix P                                              ##
+  ##  A: Transition matrix A                                            ##
+  ##  B: Birth matrix B                                                 ##
+  ##  Q_mat: Equation 14                                                ##
+  ##  stage: stage at which reproduction occurs                         ##
+  ##  newbornType: newborn type j                                       ##
+  ##  Return Value/s:                                                   ##
+  ##  Average age of maturity at each stage j                           ##
+  ##  Author/s:                                                         ##
+  ##  Dr. Simone Blomberg                                               ##
+  ##  Erin Souder                                                       ##
+  ##  Date: 17/04/2023                                                  ##
+  ########################################################################
+  
+  
+  if(!is.matrix(P)) {stop("This is not a matrix")}
+  if(!is.square.matrix(P)) {stop("This is not a square matrix")}
+  if(!is.numeric(P)) {stop("This is not numeric")}
+  
+  #### RESULTS DO NOT MATCH PAPER ####
+  
+  Q <- Q_mat(P,B)
+  Imat <- diag(x = 1, dim(P)) # Identity matrix
+  # identity matrix
+  bj <- n_bj(A,B)
+  num <- (solve((Imat - Q) %*% (Imat - Q))) %*% bj
+  den <- (solve(Imat - Q)) %*% bj
+  
+  results <- (num/den)
+  
+  results
 }
 
 
-generation_time <- function(A,B,C,newbornType){
+generation_time <- function(A,B,C,newbornTypes = NULL){
   
   
   #################################################################
@@ -1717,9 +1763,10 @@ generation_time <- function(A,B,C,newbornType){
   if(!is.numeric(A)) {stop("This is not numeric")}
   if(!is.numeric(B)) {stop("This is not numeric")}
   if(!is.numeric(C)) {stop("This is not numeric")}
+  if(is.null(newbornTypes)) newbornTypes = c(1:ncol(C));
   
   lam <- pop_growth(A)
-  R <- sum(net_rep_pop(A,B,C,newbornType))
+  R <- sum(net_rep_pop(A,B,C))
   results <- log(R) / log(lam)
   results
 }
