@@ -11,16 +11,20 @@
 ##################################################################
 
 ## Matrices are named as follows 
-##    A is the population projection matrix (sexual and clonal births, state transitions) 
-##    B is the new Births matrix 
+##    A is the population projection matrix (sexual and clonal births + state transitions) 
+##    B is the sexual births matrix 
 ##    F is the Fission matrix 
-##    P is the state transition matrix ("survival/growth matrix") not including splitting
+##    P is the state transition ("survival/growth") matrix, not including splitting 
 ##    C = F + P, transition matrix where splitting is viewed as a transition 
 ##
-##   Relation to Com(p)adre notation: in the absence of clonal reproduction, 
-##    	StageCoach B = Com(p)adre F
-##      StageCoach P = Com(p)adre U 
-##	  and we have A = P + B  = U + F	  
+##   Relation to Com(p)adre notation: 
+##      StageCoach A = Com(p)adre matA
+##    	StageCoach B = Com(p)adre matF
+##      StageCoach P = Com(p)adre matU 
+##      StageCoach F = Com(p)adre matC 
+##      StageCoach C = Com(p)adre matU + matC 
+##       
+##	  We have A = P + B + F = matU + matF + matC 	  
 
 ## setwd("<the path to the folder named stagecoach that containes this file>")
 if (Sys.info()["user"] == "Ellner") setwd("c:/repos/stagecoach")
@@ -110,7 +114,8 @@ reproductive_value <- function(A){
 }
 
 #################################################################
-##  Function to determine sensitivty matrix                    ##
+##  Function to determine sensitivity matrix                   ##
+##          note how the function name is spelled              ##
 ##  Argument/s:                                                ##
 ##      A: Projection matrix A                                 ##
 ##  Return Value/s:                                            ##
@@ -127,7 +132,6 @@ sensitivy_mat <- function(A){
   
   num <- reproductive_value(A) %*% t(stable_stage_dist(A)) 
   #reproductive value multiplied by transpose of stable stage distribution
-  # matrix multiplication used
   den <- as.numeric(reproductive_value(A) %*% stable_stage_dist(A))
   results <- Re(num/den)
   results
@@ -252,11 +256,16 @@ age_in_stage_SD <- function(A, B, C){
   if(!is.numeric(C)) {stop("This is not numeric")}
   
   Imat <- diag(dim(A)[1]) # Identity matrix
-  num <- rowSums(solve((Imat - C/pop_growth(A)) %*% (Imat - C/pop_growth(A)) %*% (Imat - C/pop_growth(A))) %*% (Imat + C/pop_growth(A)) %*% n_bj(A,B))
-  den <- rowSums(solve(Imat - C/pop_growth(A)) %*% n_bj(A,B))
+  lam = pop_growth(A); 
+  mat1 = solve(Imat + C/lam); 
+  mat2 = solve(Imat - C/lam); 
+  wts = n_bj(A,B); 
   
-  results <- sqrt((num/den) - (age_in_stage(A,B,C)) ^2)
-  results
+  num <- rowSums((mat1%*%mat2%*%mat2%*%mat2) %*% wts)
+  den <- rowSums(mat2 %*% wts)
+  
+  results <- sqrt((num/den) - (age_in_stage(A,B,C))^2)
+  return(results)
 }
 
 ########################################################################################
@@ -328,7 +337,7 @@ bet_i <- function(B){
 ##  Average age of parents produced in current time frame               ##
 ##  Author/s:                                                           ##
 ##  Erin Souder                                                         ## 
-##  Steve Ellner ('weighted' option)                                    ##
+##  Steve Ellner ('weighted' or not option)                             ##
 ##  Date: 03/01/2023                                                    ##
 ##########################################################################
 pop_gen_time <- function(A, B, C,weighted=FALSE){
@@ -352,22 +361,23 @@ pop_gen_time <- function(A, B, C,weighted=FALSE){
 }
 
   #################################################################
-  ##  Function to determine fraction of newborns in stage i      ##
-  ##  Equation 22                                                ##
+  ##  Function to calculate fraction of age-a individuals in     ##
+  ##      stage i, p_{i,a}                                       ##    
+  ##  Equation 22 in Cochran and Ellner 1992                     ##
   ##  Argument/s:                                                ##
   ##  A: Transition matrix A                                     ##
   ##  B: Birth matrix B                                          ##
   ##  C: Survival matrix P + Fission matrix F                    ##
-  ##  maxAge: number of years to use default 10                  ##
+  ##  maxAge: number of years to use default 50                  ##
   ##  Return Value/s:                                            ##
-  ##  Fraction of newborns in stage class i                      ##
+  ##  Fraction of age-a individuals in stage class i             ##
   ##  Author/s:                                                  ##
   ##  Dr. Stephen Ellner                                         ##
   ##  Dr. Simone Blomberg                                        ##
   ##  Erin Souder                                                ##
   ##  Date: 03/01/2023                                           ##
   #################################################################
-pit <- function(A,B,C, maxAge = 10){
+pit <- function(A,B,C, maxAge = 50){
 
   if(!is.matrix(A)) {stop("This is not a matrix")}
   if(!is.matrix(B)) {stop("This is not a matrix")}
@@ -379,31 +389,25 @@ pit <- function(A,B,C, maxAge = 10){
   if(!is.numeric(B)) {stop("This is not numeric")}
   if(!is.numeric(C)) {stop("This is not numeric")}
 
-   p <- pop_growth(A)
+  lam <- pop_growth(A)
   #lambda
   b <- n_bj(A,B)
   Imat <- diag(x = 1, dim(C))
   # Identity matrix
-  den <- rowSums(solve(Imat - (C/p)) %*% b)
+  den <- rowSums(solve(Imat - (C/lam)) %*% b)
   # 
   results <- matrix(NA, nrow = maxAge + 1, ncol = nrow(A))
   Ca = Imat;
   for (a in 0 : (maxAge)) {
-    # for loop to determine the fraction of newborns in each stage
-    
-    num <- (p ^ -a) %*% rowSums((Ca) %*% b)
-    
-    x <- num/den
-    
-    #print(x)
-    results[a + 1,] <- x
-    Ca <- C %*% Ca
+   num <- (lam^(-a)) %*% rowSums((Ca) %*% b)
+   x <- num/den
+   results[a + 1,] <- x
+   Ca <- C %*% Ca
   }
-  results
+  return(results) 
 }
 
 stable_age_distribution <- function(A,B,C, maxAge = 10){
-  
   
   #################################################################
   ##  Function to determine stable age distribution              ##
@@ -443,17 +447,16 @@ stable_age_distribution <- function(A,B,C, maxAge = 10){
 
 
 life_expectancy <- function(P){
-  
-  
+    
   ##################################################################
   ##  Function to determine life expectancy for each stage        ##
   ##  Equation 3                                                  ##
-  ##  Argument/s:                                                 ##
-  ##  P: Survival matrix P                                        ##
-  ##  OR                                                          ##
-  ##  C: Survival matrix P + Fission matrix F                     ##
+  ##    Argument/s:                                               ##
+  ##    P: Survival matrix P                                      ##
+  ##       OR                                                     ##
+  ##     C: Survival matrix P + Fission matrix F                  ##
   ##  Return Value/s:                                             ##
-  ##  Life expectancy for each stage                              ##
+  ##     Remaining Life expectancy for each stage                 ##
   ##  Author/s:                                                   ##
   ##  Erin Souder                                                 ##
   ##  Date: 03/01/2023                                            ##
@@ -475,7 +478,7 @@ life_expectancy_SD <- function(P){
   
   #######################################################################################
   ##  Function to determine the standard deviation for life expectancy for each stage  ##
-  ##  Equation 5                                                                       ##
+  ##  Equation 5 in Cochran and Ellner 1992                                            ##
   ##  Argument/s:                                                                      ##
   ##  P: Survival matrix P                                                             ##
   ##  OR                                                                               ##
@@ -495,22 +498,23 @@ life_expectancy_SD <- function(P){
   #take the inverse and multiply it through twice and multiply by the sum of (I + C)
   y <- colSums((Imat + P) %*% (solve(Imat - P) %^% 2))
   #take the square root of (this answer minus life expectancy squared) for the SD
-  results <- sqrt(y - (life_expectancy(P))^2) 
+  results <- sqrt(y - life_expectancy(P)^2) 
   results
 }
 
 
 
 Di_mat <- function(P){
-  
-  
+
   ########################################################################
-  ##  Function to calculate new transition matrix for each stage i       ##
-  ##  Equation 8                                                        ##
+  ##  Function to calculate modified transition matrix D_i for stage i, ##
+  ##      where individuals entering stage i stay there for one time    ##
+  ##      step and then die (100% mortality)                            ##
+  ##  Equation 8 in Cochran and Ellner 1992                             ##
   ##  Argument/s:                                                       ##
   ##  P: Survival matrix P                                              ##
   ##  Return Value/s:                                                   ##
-  ##  Transition matrix for each stage of individuals entering stage i  ##
+  ##     Array of D of transition matrices, such that D[,,i] is D_i     ##
   ##  Author/s:                                                         ##
   ##  Dr. Stephen Ellner                                                ##
   ##  Erin Souder                                                       ##
@@ -529,13 +533,11 @@ Di_mat <- function(P){
   return(results) 
 }
  
-
 meantime <- function(P){
-  
-  
   ############################################################################
-  ##  Function to determine the average time to reach stage i from stage j  ##
-  ##  Equation 9                                                            ##
+  ##  Function to compute the average time to reach stage i from stage j,   ##
+  ##         conditional on that happening                                  ## 
+  ##  Equation 9 in Cochran and Ellner 1992                                 ##
   ##  Argument/s:                                                           ##
   ##  P: Survival matrix P                                                  ##
   ##  Return Value/s:                                                       ##
@@ -570,15 +572,15 @@ meantime <- function(P){
 }
 
 meantime_SD <- function(P){
-  
-  
+    
   ######################################################################################
   ##  Function to determine the SD of the time to reach stage i from stage j          ##
   ##  Equation 10                                                                     ##
   ##  Argument/s:                                                                     ##
   ##  P: Survival matrix P                                                            ##
   ##  Return Value/s:                                                                 ##
-  ##  The standard deviation for the time to reach stage i from stage j               ##
+  ##  The standard deviation for the time to reach stage i from stage j,              ##
+  ##           conditional on that happening 
   ##  Author/s:                                                                       ##
   ##  Dr. Stephen Ellner                                                              ##
   ##  Dr. Simone Blomberg                                                             ##
